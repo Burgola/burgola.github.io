@@ -7,48 +7,44 @@
        only shows before the scripts run. -->
   <title>Burgola Prekmurje Map</title>
   <meta name="description" content="Interactive map of Prekmurje">
-  <link rel="icon" href="favicon.svg?v=20261019213029" type="image/svg+xml">
+  <link rel="icon" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.24.0/maplibre-gl.css">
-  <link rel="stylesheet" href="css/style.css?v=20261019213029">
+  <link rel="stylesheet" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/css/style.css">
   <!-- The map style (CONFIG.mapStyle in js/config.js — keep the two the same)
        starts loading with the page instead of after all the scripts. -->
   <link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
   <link rel="preload" href="https://tiles.openfreemap.org/styles/liberty" as="fetch" crossorigin>
-  <link rel="modulepreload" href="js/config.js?v=20261019213029">
-  <link rel="modulepreload" href="js/core/data.js?v=20261019213029">
-  <link rel="modulepreload" href="js/core/storage.js?v=20261019213029">
-  <link rel="modulepreload" href="js/i18n/en.js?v=20261019213029">
-  <link rel="modulepreload" href="js/i18n/i18n.js?v=20261019213029">
-  <link rel="modulepreload" href="js/i18n/sl.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/aerial.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/basemap-control.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/basemap.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/boundaries.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/geo.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/houses.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/map.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/names.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/places.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/region-lock.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/search.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/selection/panel.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/selection/selection.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/text-size.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/tile-cache.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/view-control.js?v=20261019213029">
-  <link rel="modulepreload" href="js/map/view-settings.js?v=20261019213029">
-  <link rel="modulepreload" href="js/mapper/mapper-data.js?v=20261019213029">
-  <link rel="modulepreload" href="js/names/resolve.js?v=20261019213029">
-  <link rel="modulepreload" href="js/ui/language-switch.js?v=20261019213029">
-  <link rel="modulepreload" href="js/ui/nav.js?v=20261019213029">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/config.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/core/storage.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/data/DatDecoder.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/data/DataRepository.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/i18n/en.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/i18n/i18n.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/i18n/sl.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/aerial.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/basemap-control.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/basemap.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/editor-context.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/editor-drawing.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/map.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/region-lock.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/resolved-map.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/selection/panel.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/selection/selection.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/text-size.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/tile-cache.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/view-control.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/map/view-settings.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/ui/language-switch.js">
+  <link rel="modulepreload" href="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/ui/nav.js">
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="#map" data-view="map">
-      <img src="favicon.svg?v=20261019213029" alt="" width="28" height="28">
+      <img src="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/favicon.svg" alt="" width="28" height="28">
       <span data-i18n="site.brand">Burgola Prekmurje Map</span>
     </a>
 
@@ -100,6 +96,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.24.0/maplibre-gl.js"></script>
-  <script type="module" src="js/main.js?v=20261019213029"></script>
+  <script type="module" src="assets/2a205d9969882975a5911f99bf63fa7611f3a2aa53d9bfa593682452e58e3773/js/main.js"></script>
 </body>
 </html>
