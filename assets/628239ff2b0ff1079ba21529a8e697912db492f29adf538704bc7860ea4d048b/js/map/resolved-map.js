@@ -40,6 +40,13 @@ export function areaZooms([west, south, east, north]) {
 }
 // Places show a dot under their name from this zoom.
 const DOTS_FROM = 15;
+// A house has one label and no dot: its name from HOUSE_NAMES_FROM, and from NUMBERS_FROM its
+// number with the name under it.
+const HOUSE_NAMES_FROM = 15.5, NUMBERS_FROM = 16.5;
+const houseText = (far, near) => ['step', ['zoom'], far, NUMBERS_FROM, near];
+const formatted = value => ['format', value, {}];
+const HOUSE_FAR = ['case', ['!=', ['get', 'name'], ''], formatted(['get', 'name']), formatted(['get', 'number'])];
+const HOUSE_NEAR = ['case', ['==', ['get', 'name'], ''], formatted(['get', 'number']), ['==', ['get', 'number'], ''], formatted(['get', 'name']), ['format', ['get', 'number'], { 'font-scale': 0.9 }, '\n', {}, ['get', 'name'], {}]];
 const isArea = f => f.bounds && (f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon');
 export function createResolvedMap(selection) {
     let map, mode = 'map', language = getLanguage(), view = {}, selected = null, beforeId;
@@ -124,7 +131,18 @@ export function createResolvedMap(selection) {
     // The building a house (an address) stands in, when it is loaded.
     const buildingOf = f => f?.address?.buildingId ? feature(f.address.buildingId) || null : null;
     // The houses in a building, by number.
-    const housesOf = id => (houses.get(id) || []).slice().sort((a, b) => (a.address.number ?? Infinity) - (b.address.number ?? Infinity) || a.address.suffix.localeCompare(b.address.suffix));
+    const byNumber = (a, b) => (a.address.number ?? Infinity) - (b.address.number ?? Infinity) || a.address.suffix.localeCompare(b.address.suffix);
+    const housesOf = id => (houses.get(id) || []).slice().sort(byNumber);
+    // A house is one thing: its building, the building's name and its number all select the
+    // house (the first, where a building has several). Also for data loaded since the last render.
+    const houseOf = f => f?.kind !== 4 ? null : housesOf(f.id)[0] || [...repository.features.values()].filter(h => h.kind === 5 && h.address?.buildingId === f.id && shown(h)).sort(byNumber)[0] || null;
+    const isHouse = id => { const f = feature(id); return f?.kind === 5 || !!houseOf(f); };
+    // What a house's one label says: the name it shows (its own or its building's) and its number.
+    const houseLabel = (f, name = null) => ({
+        house: true,
+        name: view.houseNames === false || view.building === false ? '' : (name || primaryName(f, language))?.text || '',
+        number: view.houseNumbers === false || f.address?.number == null ? '' : `${f.address.number}${f.address.suffix}`,
+    });
     function highlight(f, name = null) {
         selected = f ? { feature: f, name } : null;
         const targets = f?.kind === 7 ? f.members.map(id => feature(id)).filter(Boolean) : f ? [f] : [];
@@ -132,7 +150,11 @@ export function createResolvedMap(selection) {
         if (buildingOf(f)) targets.push(buildingOf(f));
         const shapes = targets.filter(t => t.geometry && t.geometry.type !== 'Point').map(t => geo(t.geometry, {}));
         if (f) for (const town of townsOf(f)) if (town.geometry) shapes.push(geo(town.geometry, { inner: true }));
-        const markers = f?.position ? [geo(point(f.position), { label: name?.text || featureTitle(f) })] : [];
+        // Its own label is hidden (markSelected) and drawn here instead. A house's says what its
+        // label says, its name and its number, without a dot.
+        const house = f?.kind === 4 || f?.kind === 5;
+        const text = (name || (f ? primaryName(f, language) : null))?.text;
+        const markers = f?.position ? [geo(point(f.position), house ? { house, name: text || '', number: f.address?.number == null ? '' : `${f.address.number}${f.address.suffix}` } : { label: text || featureTitle(f) })] : [];
         if (f?.kind === 7) for (const target of targets) if (target.position && target.geometry?.type === 'Point') markers.push(geo(point(target.position), {}));
         map.getSource('tb-selected-shape')?.setData(collection(shapes));
         map.getSource('tb-selected-point')?.setData(collection(markers));
@@ -164,6 +186,9 @@ export function createResolvedMap(selection) {
             if (!f.position) continue;
             const name = primaryName(f, language);
             const ownName = name?.subjectId === f.id ? name : null;
+            // A house is labelled once, by houseLabel below: its name (its own or its building's)
+            // and its number. Its name never stands apart as a place with a dot.
+            if (f.kind === 4 || f.kind === 5) continue;
             if (f.kind <= 3 || ownName) {
                 const cat = category(f);
                 let min = f.kind === 1 ? 8 : f.kind === 2 ? 11 : f.kind === 3 ? 14 : cat === 'building' ? 15.5 : cat === 'region' ? 9 : 14, max = f.kind === 1 ? 11 : f.kind === 2 ? 16 : 24;
@@ -171,7 +196,12 @@ export function createResolvedMap(selection) {
                 if (area) [min, max] = [area.min, f.kind === REGION ? area.max : 24];
                 labelFeatures.push(geo(point(f.position), { id: f.id, use: ownName?.id || '', kind: f.kind, category: cat, local: f.source === 0, area: !!area, label: featureTitle(f), min: min + (f.kind > 3 && f.kind !== REGION ? view.namesZoom || 0 : 0), max, reviewed: !!name && !name.textReview.stale && name.textReview.outcome === 1 }));
             }
-            if (f.address?.number != null) numbers.push(geo(point(f.position), { id: f.id, label: `${f.address.number}${f.address.suffix}` }));
+        }
+        for (const f of repository.features.values()) {
+            // A building with houses is labelled by its houses; one without, by its own name.
+            if (!f.position || !shown(f) || !(f.kind === 5 || f.kind === 4 && !houses.has(f.id))) continue;
+            const label = houseLabel(f);
+            if (label.name || label.number) numbers.push(geo(point(f.position), { id: f.id, ...label, min: label.name ? HOUSE_NAMES_FROM + (view.namesZoom || 0) : NUMBERS_FROM, max: 24 }));
         }
             map.getSource('tb-shapes').setData(collection(shapes));map.getSource('tb-labels').setData(collection(labelFeatures));map.getSource('tb-addresses').setData(collection(numbers));
         // A settlement without houses has nothing to name and is left unshaded.
@@ -197,7 +227,8 @@ export function createResolvedMap(selection) {
         map.setFilter('tb-name-points', visible([...categoryFilters, ['!', ['boolean', ['get', 'area'], false]]]));
         map.setFilter('tb-admin-labels', visible(['any', ['all', ['==', ['get', 'kind'], 1], view.obcine !== false], ['all', ['==', ['get', 'kind'], 2], view.naselja !== false], ['==', ['get', 'kind'], 3]]));
         for (const id of ['tb-region-labels', 'tb-region-lines']) map.setFilter(id, visible(['all', ['==', ['get', 'kind'], REGION], view.podregije !== false]));
-        map.setLayoutProperty('tb-address-labels', 'visibility', view.houseNumbers === false ? 'none' : 'visible');
+        // Which of a house's name and number it shows is decided in its label (houseLabel).
+        map.setFilter('tb-address-labels', visible(['literal', true]));
         map.setLayoutProperty('tb-municipal-lines', 'visibility', view.obcine === false ? 'none' : 'visible');
         map.setLayoutProperty('tb-settlement-lines', 'visibility', view.naselja === false ? 'none' : 'visible');
         map.setLayoutProperty('tb-region-mask', 'visibility', view.mask === false ? 'none' : 'visible');
@@ -277,7 +308,9 @@ export function createResolvedMap(selection) {
             const symbol = (id, source, minzoom = 0) => layer({ id, type: 'symbol', source, minzoom, layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 13, 'text-max-width': 12 }, paint: { 'text-color': '#463c35', 'text-halo-color': '#ffffff', 'text-halo-width': 1.2, 'text-opacity': UNLESS_SELECTED } });
             // The layer on top is placed first: village and municipality names win over local
             // names (such as Goričko) where they would collide.
-            symbol('tb-names', 'tb-labels');symbol('tb-admin-labels', 'tb-labels');symbol('tb-address-labels', 'tb-addresses', 16.5);
+            symbol('tb-names', 'tb-labels');symbol('tb-admin-labels', 'tb-labels');symbol('tb-address-labels', 'tb-addresses');
+            // A house's one label: from afar its name, close up its number with the name under it.
+            map.setLayoutProperty('tb-address-labels', 'text-field', houseText(HOUSE_FAR, HOUSE_NEAR));
             // From the zoom where a place shows its dot (tb-name-points), its name is just below the
             // dot instead of over it. An area's name has no dot and stays across its middle.
             const besideDot = (then, below) => ['step', ['zoom'], then, DOTS_FROM, ['case', ['boolean', ['get', 'area'], false], then, below]];
@@ -290,25 +323,25 @@ export function createResolvedMap(selection) {
             // A municipality's or a region's villages are drawn thinly inside its outline.
             layer({ id: 'tb-selected-fill', type: 'fill', source: 'tb-selected-shape', filter: ['all', ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]], ['!', ['boolean', ['get', 'inner'], false]]], paint: { 'fill-color': '#f35b40', 'fill-opacity': 0.25 } });
             layer({ id: 'tb-selected-line', type: 'line', source: 'tb-selected-shape', paint: { 'line-color': '#f35b40', 'line-width': ['case', ['boolean', ['get', 'inner'], false], 1, 3], 'line-opacity': ['case', ['boolean', ['get', 'inner'], false], 0.7, 1] } });
-            // The selected thing's own label is hidden (applyVisibility) and drawn here instead,
-            // just below a small point, so it shows once.
-            layer({ id: 'tb-selected-marker', type: 'circle', source: 'tb-selected-point', paint: { 'circle-color': '#f35b40', 'circle-radius': 4.5, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5 } });
-            layer({ id: 'tb-selected-label', type: 'symbol', source: 'tb-selected-point', layout: { 'text-field': ['get', 'label'], 'text-offset': [0, 0.55], 'text-anchor': 'top', 'text-size': 14, 'text-font': ['Noto Sans Bold'], 'text-allow-overlap': true }, paint: { 'text-color': '#f35b40', 'text-halo-color': '#ffffff', 'text-halo-width': 2 } });
+            // The selected thing's own label is hidden (markSelected) and drawn here instead, just
+            // below a small point, so it shows once. A house has no point: its label stays as it was.
+            const isHouseMarker = ['boolean', ['get', 'house'], false];
+            layer({ id: 'tb-selected-marker', type: 'circle', source: 'tb-selected-point', filter: ['!', isHouseMarker], paint: { 'circle-color': '#f35b40', 'circle-radius': 4.5, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5 } });
+            layer({ id: 'tb-selected-label', type: 'symbol', source: 'tb-selected-point', layout: { 'text-field': houseText(['case', isHouseMarker, HOUSE_FAR, formatted(['coalesce', ['get', 'label'], ''])], ['case', isHouseMarker, HOUSE_NEAR, formatted(['coalesce', ['get', 'label'], ''])]), 'text-offset': ['case', isHouseMarker, ['literal', [0, 0]], ['literal', [0, 0.55]]], 'text-anchor': ['case', isHouseMarker, 'center', 'top'], 'text-size': 14, 'text-font': ['Noto Sans Bold'], 'text-allow-overlap': true }, paint: { 'text-color': '#f35b40', 'text-halo-color': '#ffffff', 'text-halo-width': 2 } });
             const hitLayers = ['tb-selected-label', 'tb-region-labels', 'tb-names', 'tb-address-labels', 'tb-admin-labels', 'tb-buildings', 'tb-street-lines', 'tb-place-fill', 'tb-place-lines', 'tb-region-lines', 'tb-settlement-lines', 'tb-municipal-lines'];
             // While the editor chooses a region's villages, a click anywhere in a village is that village.
             const townAt = ({ lng, lat }) => [...repository.features.values()].find(f => f.kind === 2 && shown(f) && f.bounds && lng >= f.bounds[0] && lng <= f.bounds[2] && lat >= f.bounds[1] && lat <= f.bounds[3] && contains(f.geometry, [lng, lat]));
             selection.register('feature', { priority: 1, hit: (p, lngLat) => {
                 if (pickingTowns) { const town = lngLat && townAt(lngLat); if (town) return { id: town.id, label: false }; }
                 const hits = map.queryRenderedFeatures(p, { layers: hitLayers.filter(id => map.getLayer(id)) });
-                const hit = hits.find(h => h.properties?.id && !h.properties?.use);if (!hit) return null;
-                // A building with an address is its house: the house is selected, with the building.
-                const id = hit.properties.kind === 4 ? housesOf(hit.properties.id)[0]?.id || hit.properties.id : hit.properties.id;
-                return { id, label: hit.layer.type === 'symbol' };
-            }, get: async id => { const f = await repository.get(id); if (f?.kind === 7) await Promise.all(f.members.map(id => repository.get(id))); if (f?.address?.buildingId) await repository.get(f.address.buildingId).catch(() => null); return f; }, describe, highlight, bounds, maxZoom: 18 });
+                // A house's name is the house too, not a name to select on its own.
+                const hit = hits.find(h => h.properties?.id && (!h.properties?.use || isHouse(h.properties.id)));if (!hit) return null;
+                return { id: houseOf(feature(hit.properties.id))?.id || hit.properties.id, label: hit.layer.type === 'symbol' };
+            }, get: async id => { const f = await repository.get(id); if (f?.kind === 7) await Promise.all(f.members.map(id => repository.get(id))); if (f?.address?.buildingId) await repository.get(f.address.buildingId).catch(() => null); return houseOf(f) || f; }, describe, highlight, bounds, maxZoom: 18 });
             selection.register('name', { priority: 5, hit: p => {
                 // While villages are chosen, a municipality's name stands for all its villages.
-                const hit = map.queryRenderedFeatures(p, { layers: ['tb-region-labels', 'tb-names', 'tb-admin-labels'] }).find(h => h.properties?.use && (!pickingTowns || h.properties.kind === 1));return hit ? { id: hit.properties.use, label: true } : null;
-            }, get: async id => { await repository.loadMap();const name = repository.names.get(id);const target = name ? await repository.get(name.subjectId) : null;return name && target ? { name, feature: target } : null; }, describe: e => describe(e.feature, e.name), highlight: e => highlight(e?.feature, e?.name), bounds: e => bounds(e.feature), maxZoom: 18 });
+                const hit = map.queryRenderedFeatures(p, { layers: ['tb-region-labels', 'tb-names', 'tb-admin-labels'] }).find(h => h.properties?.use && !isHouse(h.properties.id) && (!pickingTowns || h.properties.kind === 1));return hit ? { id: hit.properties.use, label: true } : null;
+            }, get: async id => { await repository.loadMap();const name = repository.names.get(id);const target = name ? await repository.get(name.subjectId) : null;return name && target ? { name, feature: houseOf(target) || target } : null; }, describe: e => describe(e.feature, e.name), highlight: e => highlight(e?.feature, e?.name), bounds: e => bounds(e.feature), maxZoom: 18 });
             repository.onChange(queueRender);map.on('moveend', () => loadVisible());map.on('zoom', applyVisibility);render();addSearch();loadVisible();
             progressLegend = document.createElement('div'); progressLegend.className = 'progress-legend'; progressLegend.hidden = true; map.getContainer().append(progressLegend); renderProgressLegend();
         },
