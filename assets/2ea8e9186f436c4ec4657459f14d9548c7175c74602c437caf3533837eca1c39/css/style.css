@@ -203,6 +203,11 @@ main {
     background: var(--border);
 }
 
+/* An arrow rather than an open hand, so the point clicked is clear; over something to select
+   it becomes a pointing hand (selection.js), and the map is still dragged with a closed hand. */
+.map .maplibregl-canvas-container.maplibregl-interactive { cursor: default; }
+.map .maplibregl-canvas-container.maplibregl-interactive:active { cursor: grabbing; }
+
 .map-message {
     position: absolute;
     top: 50%;
