@@ -111,6 +111,7 @@ export default {
             map: 'Zemljevid',
             satellite: 'Satelit',
         },
+        loading: 'Nalaganje zemljevida …',
         error: {
             title: 'Zemljevida ni bilo mogoče naložiti.',
             body: 'Poskusite znova pozneje.',

@@ -108,6 +108,7 @@ export default {
             map: 'Map',
             satellite: 'Satellite',
         },
+        loading: 'Loading map…',
         error: {
             title: 'The map could not be loaded.',
             body: 'Please try again later.',

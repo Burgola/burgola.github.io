@@ -74,7 +74,9 @@ function addCredits(map) {
 
 export function initMap() {
     const message = document.getElementById('map-message');
-    const showError = () => { message.hidden = false; };
+    const loading = document.getElementById('map-loading');
+    const doneLoading = () => { if (loading) loading.hidden = true; };
+    const showError = () => { doneLoading(); message.hidden = false; };
 
     if (!window.maplibregl) {
         showError();
@@ -108,7 +110,9 @@ export function initMap() {
         if (!ready) showError();
     });
 
-    map.on('load', async () => {
+    // Our parts go in once the style is there, not at 'load', which waits for the base map's first
+    // tiles and fonts: our data then draws as soon as it is in, alongside them.
+    map.once('style.load', async () => {
         ready = true;
 
         let data = null;
@@ -162,5 +166,7 @@ export function initMap() {
         const context = window.tbmapEditorOptions ? createEditorContext(map) : null;
         window.tbmap = { map, selection, repository, drawing, context, setLanguage: changeLanguage, setView, reload: base => resolved?.reload(base), buildingOutline: id => resolved?.buildingOutline(id) || null, pickTowns: on => { resolved?.setPickingTowns(on); selection.setPicking(on); } };
         window.dispatchEvent(new CustomEvent('tbmap:ready', { detail: window.tbmap }));
+        // Loaded once what is now on the map has been drawn.
+        if (data) map.once('idle', doneLoading); else showError();
     });
 }

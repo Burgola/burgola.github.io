@@ -58,6 +58,9 @@ export function createResolvedMap(selection) {
     let regionsOf = new Map(); // settlement id -> the subregions and groups of villages it is in
     let pickingTowns = false; // the editor is choosing a region's villages
     let marked = null;      // the feature whose own label is hidden while it is selected
+    // The zooms where something drawn appears or goes (its min or max), and how many of them the
+    // filters were last set below: zooming only sets them again on crossing one (applyVisibility).
+    let breaks = [], appliedBreaks = -1;
     // Which features belong to Porabje, for the map document now loaded.
     function region() {
         if (regionsDocument !== repository.mapDocument) { regionsDocument = repository.mapDocument; regions = createRegions(regionsDocument); }
@@ -154,7 +157,9 @@ export function createResolvedMap(selection) {
         // label says, its name and its number, without a dot.
         const house = f?.kind === 4 || f?.kind === 5;
         const text = (name || (f ? primaryName(f, language) : null))?.text;
-        const markers = f?.position ? [geo(point(f.position), house ? { house, name: text || '', number: f.address?.number == null ? '' : `${f.address.number}${f.address.suffix}` } : { label: text || featureTitle(f) })] : [];
+        // The marker is the selected thing to a click as well (markAt): clicking it again unselects it.
+        const own = { id: f?.id, use: house ? '' : name?.id || '', kind: f?.kind };
+        const markers = f?.position ? [geo(point(f.position), house ? { ...own, house, name: text || '', number: f.address?.number == null ? '' : `${f.address.number}${f.address.suffix}` } : { ...own, label: text || featureTitle(f) })] : [];
         if (f?.kind === 7) for (const target of targets) if (target.position && target.geometry?.type === 'Point') markers.push(geo(point(target.position), {}));
         map.getSource('tb-selected-shape')?.setData(collection(shapes));
         map.getSource('tb-selected-point')?.setData(collection(markers));
@@ -204,6 +209,7 @@ export function createResolvedMap(selection) {
             if (label.name || label.number) numbers.push(geo(point(f.position), { id: f.id, ...label, min: label.name ? HOUSE_NAMES_FROM + (view.namesZoom || 0) : NUMBERS_FROM, max: 24 }));
         }
             map.getSource('tb-shapes').setData(collection(shapes));map.getSource('tb-labels').setData(collection(labelFeatures));map.getSource('tb-addresses').setData(collection(numbers));
+        breaks = [...new Set([...shapes, ...labelFeatures, ...numbers].flatMap(f => [f.properties.min, f.properties.max]))].sort((a, b) => a - b);
         // A settlement without houses has nothing to name and is left unshaded.
         const settlements = [...repository.features.values()].filter(f => f.kind === 2 && f.progress.total && shown(f));
         const progress = f => ({ p: f.progress.total ? f.progress.done / f.progress.total : 0, label: `${f.progress.total ? Math.floor(f.progress.done / f.progress.total * 100) : 0} % · ${f.progress.done}/${f.progress.total}` });
@@ -213,11 +219,15 @@ export function createResolvedMap(selection) {
         setMask();
         const border = region().border;
         if (border !== shownBorder) { shownBorder = border; map.getSource('tb-state-border').setData(border ? collection([geo(border, {})]) : empty()); }
-        applyVisibility();
+        applyVisibility(true);
     }
-    function applyVisibility() {
+    // The filters hold the zoom as a number, and setting one makes MapLibre lay out its source
+    // again: while zooming that is done only where what is shown changes, not on every frame.
+    function applyVisibility(force = false) {
         if (!map?.getLayer('tb-names')) return;
-        const zoom = map.getZoom();
+        const zoom = map.getZoom(), passed = breaks.filter(b => b <= zoom).length;
+        if (!force && passed === appliedBreaks) return;
+        appliedBreaks = passed;
         const visible = f => ['all', ['<=', ['get', 'min'], zoom], ['>', ['get', 'max'], zoom], f];
         const categoryFilters = ['all', ['>', ['get', 'kind'], 3], ['!=', ['get', 'kind'], REGION]];
         for (const key of ['region', 'hamlet', 'relief', 'water', 'field', 'building']) if (view[key] === false) categoryFilters.push(['!=', ['get', 'category'], key]);
@@ -256,20 +266,27 @@ export function createResolvedMap(selection) {
         const input = document.createElement('input');input.type = 'search';input.placeholder = tr('search');input.setAttribute('aria-label', tr('search'));
         const results = document.createElement('div');results.className = 'tb-search-results';results.hidden = true;searchRoot.append(input, results);map.getContainer().append(searchRoot);
         let request = 0, timer;
+        // The search data is fetched once someone starts to search, not with the map: from the
+        // focus rather than the first letters, which then wait less. (A failed fetch is tried again.)
+        input.addEventListener('focus', () => repository.loadSearch().catch(() => {}));
         input.addEventListener('input', () => { clearTimeout(timer);const mine = ++request;timer = setTimeout(async () => {
             const query = normalize(input.value.trim());if (!query) { results.hidden = true;return; }
             results.hidden = false;results.textContent = tr('searchLoading');
             try {
                 await repository.loadSearch();if (mine !== request) return;
-                const candidates = [...repository.searchFeatures.values()].map(f => {
+                // What is called what was typed comes first, then what is called something starting with
+                // it, then the rest that matches (such as each house of a village starting with it).
+                const closeness = text => { const t = normalize(text); return t === query ? 0 : t.startsWith(query) ? 1 : 2; };
+                // search.dat holds what map.dat does not; an area file's copy of a hint is the same thing.
+                const candidates = [...new Map([...repository.searchFeatures, ...repository.features]).values()].map(f => {
                     if (f.kind === 4 && !f.names.some(n => n.current) && normalize(f.legacyId) !== query) return { match: false };
                     const parent = feature(f.settlementId), address = f.address ? `${f.address.number ?? ''}${f.address.suffix}` : '';
                     const terms = [featureTitle(f), parent ? featureTitle(parent) : '', address, f.legacyId];
-                    const hay = normalize(terms.join(' '));const tokens = query.split(/\s+/);return { f, rank: normalize(featureTitle(f)) === query ? 0 : 1, match: tokens.every(t => hay.includes(t)) };
+                    const hay = normalize(terms.join(' '));const tokens = query.split(/\s+/);return { f, rank: closeness(featureTitle(f)), match: tokens.every(t => hay.includes(t)) };
                 }).filter(m => m.match && shown(m.f) && !isMapRegion(m.f));
                 for (const name of repository.names.values()) {
                     const target = feature(name.subjectId), hay = normalize(`${name.text} ${target?.settlementId ? featureTitle(feature(target.settlementId)) : ''}`);
-                    if (target && shown(target) && !isMapRegion(target) && query.split(/\s+/).every(t => hay.includes(t))) candidates.push({ f: target, name, rank: normalize(name.text) === query ? -1 : 1 });
+                    if (target && shown(target) && !isMapRegion(target) && query.split(/\s+/).every(t => hay.includes(t))) candidates.push({ f: target, name, rank: closeness(name.text) - (normalize(name.text) === query) });
                 }
                 const matches = candidates.sort((a, b) => a.rank - b.rank || (a.name?.text || featureTitle(a.f)).localeCompare(b.name?.text || featureTitle(b.f))).slice(0, 35);
                 results.replaceChildren();if (!matches.length) results.textContent = tr('noResults');
@@ -328,21 +345,38 @@ export function createResolvedMap(selection) {
             const isHouseMarker = ['boolean', ['get', 'house'], false];
             layer({ id: 'tb-selected-marker', type: 'circle', source: 'tb-selected-point', filter: ['!', isHouseMarker], paint: { 'circle-color': '#f35b40', 'circle-radius': 4.5, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1.5 } });
             layer({ id: 'tb-selected-label', type: 'symbol', source: 'tb-selected-point', layout: { 'text-field': houseText(['case', isHouseMarker, HOUSE_FAR, formatted(['coalesce', ['get', 'label'], ''])], ['case', isHouseMarker, HOUSE_NEAR, formatted(['coalesce', ['get', 'label'], ''])]), 'text-offset': ['case', isHouseMarker, ['literal', [0, 0]], ['literal', [0, 0.55]]], 'text-anchor': ['case', isHouseMarker, 'center', 'top'], 'text-size': 14, 'text-font': ['Noto Sans Bold'], 'text-allow-overlap': true }, paint: { 'text-color': '#f35b40', 'text-halo-color': '#ffffff', 'text-halo-width': 2 } });
-            const hitLayers = ['tb-selected-label', 'tb-region-labels', 'tb-names', 'tb-address-labels', 'tb-admin-labels', 'tb-buildings', 'tb-street-lines', 'tb-place-fill', 'tb-place-lines', 'tb-region-lines', 'tb-settlement-lines', 'tb-municipal-lines'];
+            // What a click (or the pointer) is on. A name, its dot or a house's label is found within
+            // a few pixels of it, the nearest first: a dot is small and text is thin, and a click
+            // just beside one is meant for it. Areas and lines count only right under the pointer.
+            const markLayers = ['tb-selected-label', 'tb-selected-marker', 'tb-region-labels', 'tb-names', 'tb-name-points', 'tb-address-labels', 'tb-admin-labels'];
+            const areaLayers = ['tb-buildings', 'tb-street-lines', 'tb-place-fill', 'tb-place-lines', 'tb-region-lines', 'tb-settlement-lines', 'tb-municipal-lines'];
+            const NEAR = 6;
+            const markAt = p => {
+                const layers = markLayers.filter(id => map.getLayer(id)), usable = h => h.properties?.id;
+                const exact = map.queryRenderedFeatures(p, { layers }).find(usable);
+                if (exact) return exact;
+                const away = h => { if (h.geometry?.type !== 'Point') return Infinity; const at = map.project(h.geometry.coordinates); return Math.hypot(at.x - p.x, at.y - p.y); };
+                return map.queryRenderedFeatures([[p.x - NEAR, p.y - NEAR], [p.x + NEAR, p.y + NEAR]], { layers }).filter(usable).sort((a, b) => away(a) - away(b))[0] || null;
+            };
             // While the editor chooses a region's villages, a click anywhere in a village is that village.
             const townAt = ({ lng, lat }) => [...repository.features.values()].find(f => f.kind === 2 && shown(f) && f.bounds && lng >= f.bounds[0] && lng <= f.bounds[2] && lat >= f.bounds[1] && lat <= f.bounds[3] && contains(f.geometry, [lng, lat]));
             selection.register('feature', { priority: 1, hit: (p, lngLat) => {
                 if (pickingTowns) { const town = lngLat && townAt(lngLat); if (town) return { id: town.id, label: false }; }
-                const hits = map.queryRenderedFeatures(p, { layers: hitLayers.filter(id => map.getLayer(id)) });
                 // A house's name is the house too, not a name to select on its own.
-                const hit = hits.find(h => h.properties?.id && (!h.properties?.use || isHouse(h.properties.id)));if (!hit) return null;
-                return { id: houseOf(feature(hit.properties.id))?.id || hit.properties.id, label: hit.layer.type === 'symbol' };
+                const mark = markAt(p), own = h => !h.properties.use || isHouse(h.properties.id);
+                const hit = mark ? (own(mark) ? mark : null) : map.queryRenderedFeatures(p, { layers: areaLayers.filter(id => map.getLayer(id)) }).find(h => h.properties?.id && own(h));
+                if (!hit) return null;
+                return { id: houseOf(feature(hit.properties.id))?.id || hit.properties.id, label: !!mark };
             }, get: async id => { const f = await repository.get(id); if (f?.kind === 7) await Promise.all(f.members.map(id => repository.get(id))); if (f?.address?.buildingId) await repository.get(f.address.buildingId).catch(() => null); return houseOf(f) || f; }, describe, highlight, bounds, maxZoom: 18 });
             selection.register('name', { priority: 5, hit: p => {
                 // While villages are chosen, a municipality's name stands for all its villages.
-                const hit = map.queryRenderedFeatures(p, { layers: ['tb-region-labels', 'tb-names', 'tb-admin-labels'] }).find(h => h.properties?.use && !isHouse(h.properties.id) && (!pickingTowns || h.properties.kind === 1));return hit ? { id: hit.properties.use, label: true } : null;
+                const hit = markAt(p);
+                return hit?.properties.use && !isHouse(hit.properties.id) && (!pickingTowns || hit.properties.kind === 1) ? { id: hit.properties.use, label: true } : null;
             }, get: async id => { await repository.loadMap();const name = repository.names.get(id);const target = name ? await repository.get(name.subjectId) : null;return name && target ? { name, feature: houseOf(target) || target } : null; }, describe: e => describe(e.feature, e.name), highlight: e => highlight(e?.feature, e?.name), bounds: e => bounds(e.feature), maxZoom: 18 });
-            repository.onChange(queueRender);map.on('moveend', () => loadVisible());map.on('zoom', applyVisibility);render();addSearch();loadVisible();
+            repository.onChange(queueRender);map.on('moveend', () => loadVisible());map.on('zoom', () => applyVisibility());
+            // Drawn on the next frame, with the mode, language and view that map.js sets just after this:
+            // each drawing has MapLibre lay out all of it again.
+            queueRender();addSearch();loadVisible();
             progressLegend = document.createElement('div'); progressLegend.className = 'progress-legend'; progressLegend.hidden = true; map.getContainer().append(progressLegend); renderProgressLegend();
         },
         setMode(value) {

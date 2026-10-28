@@ -146,6 +146,23 @@ export function createSelection(map, panel) {
         else select(hit.kind, hit.id);
     });
 
+    // The pointer shows what a click there would select, with the same test as the click.
+    let hovered = null, queued = false, dragging = false;
+    const pointAt = (cursor) => { const canvas = map.getCanvas(); if (canvas.style.cursor !== cursor) canvas.style.cursor = cursor; };
+    map.on('mousemove', (e) => {
+        hovered = e;
+        if (queued) return;
+        queued = true;
+        requestAnimationFrame(() => {
+            queued = false;
+            if (suspended || dragging || !hovered) return;
+            pointAt(hitAt(hovered.point, hovered.lngLat) ? 'pointer' : '');
+        });
+    });
+    map.on('dragstart', () => { dragging = true; if (!suspended) pointAt(''); });
+    map.on('dragend', () => { dragging = false; });
+    map.getCanvas().addEventListener('mouseleave', () => { hovered = null; if (!suspended) pointAt(''); });
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && current) select(null);
     });
