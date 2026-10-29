@@ -318,7 +318,9 @@ export function createResolvedMap(selection) {
             layer({ id: 'tb-place-fill', type: 'fill', source: 'tb-shapes', filter: ['>=', ['get', 'kind'], 6], paint: { 'fill-color': '#ed856c', 'fill-opacity': 0.12 } });
             layer({ id: 'tb-place-lines', type: 'line', source: 'tb-shapes', filter: ['>=', ['get', 'kind'], 6], paint: { 'line-color': '#d46c55', 'line-width': 1.7, 'line-dasharray': [3, 2] } });
             // Subregions and groups of villages: a long dash along their villages' outer border.
-            layer({ id: 'tb-region-lines', type: 'line', source: 'tb-shapes', filter: ['==', ['get', 'kind'], REGION], layout: { 'line-join': 'round' }, paint: { 'line-color': ['match', ['get', 'type'], 3, REGION_COLOURS.map.group, REGION_COLOURS.map.subregion], 'line-width': 2.4, 'line-opacity': 0.8, 'line-dasharray': [6, 2.5] } });
+            // A subregion's border is a light hint behind the villages', not a line of its own weight:
+            // thin, faint and finely dashed, where two subregions meet as well (both outlines lie there).
+            layer({ id: 'tb-region-lines', type: 'line', source: 'tb-shapes', filter: ['==', ['get', 'kind'], REGION], layout: { 'line-join': 'round' }, paint: { 'line-color': ['match', ['get', 'type'], 3, REGION_COLOURS.map.group, REGION_COLOURS.map.subregion], 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.9, 13, 1.5], 'line-opacity': 0.45, 'line-dasharray': [3, 3] } });
             layer({ id: 'tb-buildings', type: 'fill', source: 'tb-shapes', minzoom: 16, filter: ['==', ['get', 'kind'], 4], paint: { 'fill-color': '#746a5c', 'fill-opacity': 0.22 } });
             layer({ id: 'tb-building-lines', type: 'line', source: 'tb-shapes', minzoom: 16, filter: ['==', ['get', 'kind'], 4], paint: { 'line-color': '#8d7562', 'line-width': 1 } });
             layer({ id: 'tb-municipal-lines', type: 'line', source: 'tb-shapes', filter: ['==', ['get', 'kind'], 1], paint: { 'line-color': '#93735d', 'line-width': 1.8 } });
