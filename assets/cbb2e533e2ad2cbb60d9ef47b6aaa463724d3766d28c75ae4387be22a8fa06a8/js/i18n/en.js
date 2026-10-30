@@ -115,6 +115,9 @@ export default {
         },
     },
     selection: {
+        editorNote: "Editor's note:",
+        thirdName: 'Third name',
+        numberedName: 'Name {number}',
         obcina: 'Municipality',
         naselje: 'Settlement',
         hungarianName: 'Hungarian: {name}',

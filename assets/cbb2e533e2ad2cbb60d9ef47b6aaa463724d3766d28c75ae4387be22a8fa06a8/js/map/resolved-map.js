@@ -1,4 +1,4 @@
-import { repository, title, primaryName } from '../data/DataRepository.js';
+import { repository, title, primaryName, orderedNames, nameConfirmed } from '../data/DataRepository.js';
 import { getLanguage, t } from '../i18n/i18n.js';
 import { createRegions, contains, isMapRegion, REGION } from './regions.js';
 
@@ -98,12 +98,25 @@ export function createResolvedMap(selection) {
         const note = document.createElement('div'); note.className = 'progress-legend-note'; note.textContent = t('progress.what');
         progressLegend.append(heading, bar, ends, note);
     }
-    function nameRows(names, targetId) {
-        return names.map(n => ({ label: `${n.language.toUpperCase()} · ${tr(n.role === 2 || !n.current ? 'historic' : n.role === 1 ? 'alternative' : 'name')}`, value: n.text, badge: { text: status(n.textReview), tone: !n.textReview.stale && n.textReview.outcome === 1 ? 'confirmed' : 'gov' }, ...(n.subjectId !== targetId ? { select: { kind: 'feature', id: n.subjectId } } : {}) }));
+    function nameRows(names, targetId, selected = null) {
+        if (selected && !names.some(n => n.id === selected.id)) names = [...names, selected];
+        const counts = new Map();
+        return orderedNames({ id: targetId, names }, language).flatMap(n => {
+            const historical = n.role === 2 || !n.current;
+            const number = historical ? 0 : (counts.get(n.language) || 0) + 1;
+            if (!historical) counts.set(n.language, number);
+            if (selected && n.id !== selected.id) return [];
+            const label = historical ? tr('historic') : number === 1 ? tr('name')
+                : number === 2 ? tr('alternative') : number === 3 ? t('selection.thirdName')
+                : t('selection.numberedName', { number });
+            return [{ label: `${n.language.toUpperCase()} · ${label}`, value: n.text,
+                badge: { text: status(n.textReview), tone: nameConfirmed(n) ? 'confirmed' : 'gov' },
+                ...(n.subjectId !== targetId ? { select: { kind: 'feature', id: n.subjectId } } : {}) }];
+        });
     }
     function describe(f, name = null) {
         const names = name ? [name] : f.names;
-        const rows = nameRows(names, f.id);
+        const rows = nameRows(f.names, f.id, name);
         const details = [{ label: 'GURS', value: sourceStatus(name?.source ?? f.source) }];
         for (const n of names) if (n.official && n.official !== n.text) rows.push({ label: `${tr('gurs')} · ${n.language.toUpperCase()}`, value: n.official });
         if (name) rows.push(relation(tr('target'), f.id), { label: tr('reviewScope'), value: status(name.textReview) }, { label: getLanguage() === 'sl' ? 'Pregled povezave' : 'Attachment review', value: status(name.attachmentReview) });

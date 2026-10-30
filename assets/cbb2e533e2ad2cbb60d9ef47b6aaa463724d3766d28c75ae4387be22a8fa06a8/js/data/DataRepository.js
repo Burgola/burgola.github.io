@@ -43,10 +43,15 @@ export const repository = new DataRepository(globalThis.window?.tbmapEditorOptio
 
 // Names, applicability, inheritance and lifecycle have already been resolved in
 // C++. These helpers format that projection; they never revive a source label.
-export function primaryName(feature, language = 'sl') {
-    const current = feature.names.filter(n => n.current);
-    return current.sort((a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id))[0] || null;
+export const nameConfirmed = name => name.textReview.outcome === 1 && !name.textReview.stale;
+export function orderedNames(feature, language = 'sl') {
+    return [...feature.names].sort((a, b) => Number(!a.current) - Number(!b.current)
+        || Number(!nameConfirmed(a)) - Number(!nameConfirmed(b))
+        || rank(a) - rank(b) || a.id.localeCompare(b.id));
     function rank(n) { return (n.language === language ? 0 : n.language === 'sl' ? 10 : 20) + (n.role === 0 ? 0 : 2) + (n.subjectId === feature.id ? 0 : 1); }
+}
+export function primaryName(feature, language = 'sl') {
+    return orderedNames(feature, language).find(n => n.current) || null;
 }
 export function title(feature, language = 'sl') {
     return primaryName(feature, language)?.text || (feature.address?.number != null ? `${feature.address.number}${feature.address.suffix}` : feature.building?.number ? `#${feature.building.number}` : '—');

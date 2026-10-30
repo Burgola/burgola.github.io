@@ -118,6 +118,9 @@ export default {
         },
     },
     selection: {
+        editorNote: 'Opomba urednika:',
+        thirdName: 'Tretje ime',
+        numberedName: '{number}. ime',
         obcina: 'Občina',
         naselje: 'Naselje',
         hungarianName: 'Madžarsko: {name}',

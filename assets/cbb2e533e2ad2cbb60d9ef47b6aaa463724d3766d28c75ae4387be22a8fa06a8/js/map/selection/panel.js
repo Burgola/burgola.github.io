@@ -96,7 +96,7 @@ export function createSelectionPanel(root) {
         el.subtitles.replaceChildren(...(view.subtitles || []).filter(Boolean).map((s) => node('div', null, s)));
 
         const noteText = localized(view.note, getLanguage());
-        el.note.replaceChildren(...(noteText ? [node('div', 'sp-note-text', noteText)] : []));
+        el.note.replaceChildren(...(noteText ? [node('strong', 'sp-note-label', t('selection.editorNote')), node('div', 'sp-note-text', noteText)] : []));
         el.note.hidden = !noteText;
 
         el.body.replaceChildren();
