@@ -104,7 +104,7 @@ export function createResolvedMap(selection) {
     function describe(f, name = null) {
         const names = name ? [name] : f.names;
         const rows = nameRows(names, f.id);
-        rows.push({ label: 'GURS', value: sourceStatus(name?.source ?? f.source) });
+        const details = [{ label: 'GURS', value: sourceStatus(name?.source ?? f.source) }];
         for (const n of names) if (n.official && n.official !== n.text) rows.push({ label: `${tr('gurs')} · ${n.language.toUpperCase()}`, value: n.official });
         if (name) rows.push(relation(tr('target'), f.id), { label: tr('reviewScope'), value: status(name.textReview) }, { label: getLanguage() === 'sl' ? 'Pregled povezave' : 'Attachment review', value: status(name.attachmentReview) });
         if (f.kind === 6 && f.category) rows.push({ label: tr('kindOf'), value: t(`names.type.${f.category}`) === `names.type.${f.category}` ? t('names.type.other') : t(`names.type.${f.category}`) });
@@ -120,14 +120,16 @@ export function createResolvedMap(selection) {
             if (a.buildingId) rows.push(relation(tr('building'), a.buildingId));
             // Other houses in the same building.
             if (a.buildingId) for (const other of housesOf(a.buildingId)) if (other.id !== f.id) rows.push(relation(tr('address'), other.id));
-            rows.push({ label: tr('postal'), value: `${a.postalCode} ${a.postalName}`.trim() }, { label: tr('community'), value: a.community }, { label: tr('school'), value: a.schoolDistrict }, { label: tr('unit'), value: a.administrativeUnit });
+            details.push({ label: tr('postal'), value: `${a.postalCode} ${a.postalName}`.trim() }, { label: tr('community'), value: a.community }, { label: tr('school'), value: a.schoolDistrict }, { label: tr('unit'), value: a.administrativeUnit });
         }
         // A house shows its building's figures too.
         const building = f.building ? f : buildingOf(f), b = building?.building;
-        if (b) rows.push({ label: tr('cadastral'), value: `${b.cadastralCode} ${b.cadastralName}`.trim() }, ...(building === f ? [{ label: tr('building'), value: b.number }] : []), { label: tr('year'), value: b.year }, { label: tr('floors'), value: b.floors }, { label: tr('dwellings'), value: b.dwellings }, { label: tr('businesses'), value: b.businessPremises });
-        rows.push({ label: tr('existence'), value: tr(['unknown', 'current', 'historic'][f.existence]) }, { label: tr('locationScope'), value: status(f.locationReview) });
+        if (b) details.push({ label: tr('cadastral'), value: `${b.cadastralCode} ${b.cadastralName}`.trim() }, ...(building === f ? [{ label: tr('building'), value: b.number }] : []), { label: tr('year'), value: b.year }, { label: tr('floors'), value: b.floors }, { label: tr('dwellings'), value: b.dwellings }, { label: tr('businesses'), value: b.businessPremises });
+        details.push({ label: tr('existence'), value: tr(['unknown', 'current', 'historic'][f.existence]) }, { label: tr('locationScope'), value: status(f.locationReview) });
+        const sections = [{ title: getLanguage() === 'sl' ? 'Podrobnosti' : 'Details', rows: details, fold: 'details' }];
+        if (f.oldNumbers.length) sections.push({ title: tr('oldNumbers'), rows: f.oldNumbers.map(n => ({ label: n.period || tr('unknown'), value: `${n.number}${n.settlement ? `, ${n.settlement}` : ''}` })) });
         // Headed by what the place is (a settlement, a house…), also when one of its names was clicked.
-        return { kind: kindName(f), title: name?.text || featureTitle(f), note: name?.notes || f.notes, rows, sections: f.oldNumbers.length ? [{ title: tr('oldNumbers'), rows: f.oldNumbers.map(n => ({ label: n.period || tr('unknown'), value: `${n.number}${n.settlement ? `, ${n.settlement}` : ''}` })) }] : [] };
+        return { kind: kindName(f), title: name?.text || featureTitle(f), note: name?.notes || f.notes, rows, sections };
     }
     // A municipality's or a region's settlements, by name.
     const townsOf = f => (f.kind === 1 ? towns.get(f.id) || [] : f.kind === REGION ? f.members.map(feature).filter(Boolean) : []).slice().sort((a, b) => featureTitle(a).localeCompare(featureTitle(b)));
