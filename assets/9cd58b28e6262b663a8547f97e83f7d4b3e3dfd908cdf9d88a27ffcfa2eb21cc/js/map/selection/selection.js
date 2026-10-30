@@ -8,6 +8,7 @@
 //                            its name, which beats any area click)
 //       get(id, hint),       -> entity | null  (may return a Promise); hint is
 //                            what the caller knows to find it (search)
+//       canonical(entity),   -> optional { kind, id } redirect to the complete place
 //       describe(entity),    -> panel view (see panel.js), in the current language
 //       highlight(entity),   draw it as selected; called with null to undo
 //       bounds(entity),      -> [[w, s], [e, n]] for "Zoom to"
@@ -19,7 +20,7 @@
 //
 // The manager does the rest: click handling, Escape, the panel, links between
 // things (a panel row or button can select another kind), re-rendering on a
-// language change, and attaching the mapper's note (data/mapper/<kind>.json).
+// language change. Name identities are input aliases; only the complete place is rendered.
 // A new kind of thing (parcels, our own places, ...) is one more register()
 // call — nothing here changes.
 
@@ -28,7 +29,8 @@ import { onLanguageChange } from '../../i18n/i18n.js';
 export function createSelection(map, panel) {
     const kinds = new Map();
     let current = null; // { kind, id, entity }
-    let request = 0;    // guards against a slow get() finishing after a newer select
+    let request = 0, refreshRequest = 0; // late selection and refresh results cannot replace newer ones
+    let pending = false;
     let suspended = false;
     let picking = false;   // the editor is picking things on the map (setPicking)
 
@@ -68,15 +70,29 @@ export function createSelection(map, panel) {
         const mine = ++request;
         if (current) kinds.get(current.kind).highlight(null);
         current = null;
+        pending = !!kind;
+        panel.hide();
 
-        const def = kind && kinds.get(kind);
+        let def = kind && kinds.get(kind);
         let entity = null;
-        try { entity = def ? await def.get(id, hint) : null; }
+        try {
+            entity = def ? await def.get(id, hint) : null;
+            if (entity) {
+                const canonical = def.canonical?.(entity) || { kind, id };
+                kind = canonical.kind; id = canonical.id;
+                def = kinds.get(kind);
+                if (!def) throw new Error('Unknown place selection kind');
+            }
+        }
         catch (error) {
             if (mine !== request || error.code === 'STALE_PREVIEW') return false;
-            console.error('[Selection]', error); panel.hide(); return false;
+            pending = false;
+            console.error('[Selection]', error); def?.error?.(error);
+            if (!quiet) announce(null);
+            return false;
         }
         if (mine !== request) return;
+        pending = false;
         if (!entity) {
             panel.hide();
             if (!quiet) announce(null);
@@ -122,15 +138,25 @@ export function createSelection(map, panel) {
     // have a new name, or (one of our own places) be gone.
     async function refresh() {
         if (!current) return;
+        const mine = ++refreshRequest, selectionRequest = request;
         const { kind, id } = current;
-        const entity = await kinds.get(kind).get(id);
-        if (!current || current.kind !== kind || current.id !== id) return;
+        const def = kinds.get(kind);
+        let entity;
+        try { entity = await def.get(id); }
+        catch (error) {
+            if (mine !== refreshRequest || selectionRequest !== request || error.code === 'STALE_PREVIEW') return;
+            console.error('[Selection refresh]', error); def.error?.(error);
+            await select(null);
+            return;
+        }
+        if (mine !== refreshRequest || selectionRequest !== request || !current) return;
         if (!entity) {
             select(null);
             return;
         }
-        current.entity = entity;
-        kinds.get(kind).highlight(entity);
+        const canonical = def.canonical?.(entity) || { kind, id };
+        current = { ...current, kind: canonical.kind, id: canonical.id, entity };
+        kinds.get(current.kind).highlight(entity);
         render();
     }
 
@@ -164,7 +190,7 @@ export function createSelection(map, panel) {
     map.getCanvas().addEventListener('mouseleave', () => { hovered = null; if (!suspended) pointAt(''); });
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && current) select(null);
+        if (e.key === 'Escape' && (current || pending)) select(null);
     });
 
     panel.onClose(() => select(null));
