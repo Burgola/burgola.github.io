@@ -45,6 +45,7 @@ export function areaZooms([west, south, east, north]) {
 }
 // Places show a dot under their name from this zoom.
 const DOTS_FROM = 15;
+const ROAD_NUMBERS = 'highway-shield-non-us'; // the style's layer of road numbers outside the US
 // A house has one label and no dot: its name from HOUSE_NAMES_FROM, and from NUMBERS_FROM its
 // number with the name under it.
 const HOUSE_NAMES_FROM = 15.5, NUMBERS_FROM = 16.5;
@@ -403,10 +404,16 @@ export function createResolvedMap(selection) {
             const zoomed = (...stops) => ['interpolate', ['linear'], ['zoom'], ...stops];
             layer({ id: 'tb-state-band', type: 'line', source: 'tb-state-border', layout: { 'line-join': 'round' }, paint: { 'line-color': STATE_BORDER.map.band, 'line-opacity': 0.4, 'line-width': zoomed(8, 3, 13, 6, 17, 9), 'line-offset': zoomed(8, -1.5, 13, -3, 17, -4.5) } });
             layer({ id: 'tb-state-line', type: 'line', source: 'tb-state-border', layout: { 'line-join': 'round' }, paint: { 'line-color': STATE_BORDER.map.line, 'line-width': zoomed(8, 1.4, 13, 2.2, 17, 3), 'line-dasharray': [5, 1.6, 1, 1.6] } });
+            // A municipality's or a region's villages are drawn thinly inside its outline.
+            layer({ id: 'tb-selected-fill', type: 'fill', source: 'tb-selected-shape', filter: ['all', ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]], ['!', ['boolean', ['get', 'inner'], false]]], paint: { 'fill-color': '#f35b40', 'fill-opacity': 0.25 } });
+            layer({ id: 'tb-selected-line', type: 'line', source: 'tb-selected-shape', paint: { 'line-color': '#f35b40', 'line-width': ['case', ['boolean', ['get', 'inner'], false], 1, 3], 'line-opacity': ['case', ['boolean', ['get', 'inner'], false], 0.7, 1] } });
             const symbol = (id, source, minzoom = 0) => layer({ id, type: 'symbol', source, minzoom, layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 13, 'text-max-width': 12 }, paint: { 'text-color': '#463c35', 'text-halo-color': '#ffffff', 'text-halo-width': 1.2, 'text-opacity': UNLESS_SELECTED } });
             // The layer on top is placed first: village and municipality names win over local
             // names (such as Goričko) where they would collide.
             symbol('tb-names', 'tb-labels');symbol('tb-admin-labels', 'tb-labels');symbol('tb-address-labels', 'tb-addresses');
+            // Road numbers lose to every name of ours. Above them in the style, a number would
+            // hide a name at some zooms and not others; under them it shows further along its road.
+            if (map.getLayer(ROAD_NUMBERS)) map.moveLayer(ROAD_NUMBERS, 'tb-names');
             // A house's one label: from afar its name, close up its number with the name under it.
             map.setLayoutProperty('tb-address-labels', 'text-field', houseText(HOUSE_FAR, HOUSE_NEAR));
             // From the zoom where a place shows its dot (tb-name-points), its name is just below the
@@ -418,9 +425,6 @@ export function createResolvedMap(selection) {
             layer({ id: 'tb-region-labels', type: 'symbol', source: 'tb-labels', filter: ['==', ['get', 'kind'], REGION], layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Italic'], 'text-size': 15, 'text-letter-spacing': 0.14, 'text-transform': 'uppercase', 'text-max-width': 10 }, paint: { 'text-color': REGION_COLOURS.map.text, 'text-halo-color': '#ffffff', 'text-halo-width': 1.4, 'text-opacity': UNLESS_SELECTED } });
             layer({ id: 'tb-name-points', type: 'circle', source: 'tb-labels', minzoom: DOTS_FROM, filter: ['>', ['get', 'kind'], 3], paint: { 'circle-color': '#ee654a', 'circle-radius': 3, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1, 'circle-opacity': UNLESS_SELECTED, 'circle-stroke-opacity': UNLESS_SELECTED } });
             layer({ id: 'tb-progress-labels', type: 'symbol', source: 'tb-progress-labels', minzoom: 11, layout: { visibility: 'none', 'text-field': ['get', 'label'], 'text-offset': [0, 1.6], 'text-font': ['Noto Sans Bold'], 'text-size': 11, 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': '#ffffff', 'text-halo-color': progressColor, 'text-halo-width': 2 } });
-            // A municipality's or a region's villages are drawn thinly inside its outline.
-            layer({ id: 'tb-selected-fill', type: 'fill', source: 'tb-selected-shape', filter: ['all', ['in', ['geometry-type'], ['literal', ['Polygon', 'MultiPolygon']]], ['!', ['boolean', ['get', 'inner'], false]]], paint: { 'fill-color': '#f35b40', 'fill-opacity': 0.25 } });
-            layer({ id: 'tb-selected-line', type: 'line', source: 'tb-selected-shape', paint: { 'line-color': '#f35b40', 'line-width': ['case', ['boolean', ['get', 'inner'], false], 1, 3], 'line-opacity': ['case', ['boolean', ['get', 'inner'], false], 0.7, 1] } });
             // The selected thing's own label is hidden (markSelected) and drawn here instead, just
             // below a small point, so it shows once. A house and an area have no point: their label
             // stays where it was.
