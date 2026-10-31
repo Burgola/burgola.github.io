@@ -15,7 +15,7 @@ export class DataRepository {
             if (generation !== this.generation) { const error = new Error('This map request belongs to an earlier preview'); error.code = 'STALE_PREVIEW'; throw error; }
             const target = kind === 3 ? this.searchFeatures : this.features;
             for (const feature of document.features) target.set(feature.id, feature);
-            for (const name of document.names) this.names.set(name.id, name);
+            for (const name of document.names) if (kind !== 3 || !this.names.has(name.id)) this.names.set(name.id, name);
             if (kind === 1) this.mapDocument = document;
             for (const listener of this.listeners) listener(document);
             return document;
@@ -27,12 +27,20 @@ export class DataRepository {
     loadArea(settlementId) { return this.fetch(`areas/${settlementId}.dat`, 2); }
     loadSearch() { return this.fetch('search.dat', 3); }
     async get(id) {
+        const generation = this.generation;
+        const current = () => {
+            if (generation !== this.generation) { const error = new Error('This selection belongs to an earlier preview'); error.code = 'STALE_PREVIEW'; throw error; }
+        };
         await this.loadMap();
+        current();
         if (this.features.has(id)) return this.features.get(id);
         await this.loadSearch();
+        current();
         const hint = this.searchFeatures.get(id);
         if (hint?.settlementId) await this.loadArea(hint.settlementId);
-        return this.features.get(id) || hint || null;
+        current();
+        if (hint && !this.features.has(id)) throw new Error('The complete place record is missing from its area file');
+        return this.features.get(id) || null;
     }
     onChange(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
     reset(base = this.base) {

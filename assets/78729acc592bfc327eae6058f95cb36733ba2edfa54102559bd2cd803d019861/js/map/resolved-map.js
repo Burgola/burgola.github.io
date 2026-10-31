@@ -50,7 +50,8 @@ const HOUSE_NEAR = ['case', ['==', ['get', 'name'], ''], formatted(['get', 'numb
 const isArea = f => f.bounds && (f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon');
 export function createResolvedMap(selection) {
     let map, mode = 'map', language = getLanguage(), view = {}, selected = null, beforeId;
-    let renderQueued = false, disposed = false, searchRoot, progressLegend;
+    let renderQueued = false, disposed = false, searchRoot, progressLegend, panelQueued = false;
+    let cancelSearch = () => {};
     const layerIds = [], loadErrors = new Map();
     let regions = createRegions(null), regionsDocument = null, shownBorder = null;
     let houses = new Map(); // building id -> the houses (addresses) in it
@@ -73,8 +74,40 @@ export function createResolvedMap(selection) {
         map.getSource('tb-mask')?.setData(holes.length ? collection([geo({ type: 'Polygon', coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]], ...holes] }, {})]) : empty());
     }
     const feature = id => repository.features.get(id) || repository.searchFeatures.get(id);
-    const featureTitle = f => f ? title(f, language) : '—';
+    const featureTitle = f => f ? title(f, getLanguage()) : '—';
+    const allFeatures = () => new Map([...repository.searchFeatures, ...repository.features]).values();
+    function indexHouses() {
+        houses = new Map();
+        for (const f of allFeatures()) if (f.kind === 5 && f.address?.buildingId)
+            (houses.get(f.address.buildingId) || houses.set(f.address.buildingId, []).get(f.address.buildingId)).push(f);
+    }
+    async function getFeature(id) {
+        const generation = repository.generation;
+        const current = () => {
+            if (generation !== repository.generation) { const e = new Error('This place belongs to an earlier preview'); e.code = 'STALE_PREVIEW'; throw e; }
+        };
+        let f = await repository.get(id); current();
+        if (!f) return null;
+        if (f.kind === 4 || f.kind === 5) {
+            await repository.loadSearch(); current();
+            indexHouses();
+            const buildingId = f.address?.buildingId || (f.kind === 4 ? f.id : null);
+            if (buildingId) {
+                await Promise.all(housesOf(buildingId).map(h => repository.get(h.id))); current();
+                const building = await repository.get(buildingId); current();
+                if (!building) throw new Error('The linked building record is missing');
+            }
+            indexHouses();
+            f = feature(id) || f;
+            f = houseOf(f) || f;
+        }
+        if (f.kind === 7) { await Promise.all(f.members.map(id => repository.get(id))); current(); }
+        return feature(f.id) || f;
+    }
+    const canonical = f => ({ kind: 'feature', id: f.id });
     const relation = (label, id) => ({ label, value: featureTitle(feature(id)), select: { kind: 'feature', id } });
+    const addressText = f => `${featureTitle(feature(f.address.streetId || f.address.settlementId))} ${f.address.number ?? '?'}${f.address.suffix || ''}`;
+    const addressRow = f => ({ ...relation(tr('address'), f.id), value: addressText(f) });
     function error(error) {
         console.error('[TBMap data]', error);
         const el = document.getElementById('map-message');
@@ -98,40 +131,41 @@ export function createResolvedMap(selection) {
         const note = document.createElement('div'); note.className = 'progress-legend-note'; note.textContent = t('progress.what');
         progressLegend.append(heading, bar, ends, note);
     }
-    function nameRows(names, targetId, selected = null) {
-        if (selected && !names.some(n => n.id === selected.id)) names = [...names, selected];
+    function nameRows(names, targetId) {
         const counts = new Map();
-        return orderedNames({ id: targetId, names }, language).flatMap(n => {
+        return orderedNames({ id: targetId, names }, getLanguage()).flatMap(n => {
             const historical = n.role === 2 || !n.current;
             const number = historical ? 0 : (counts.get(n.language) || 0) + 1;
             if (!historical) counts.set(n.language, number);
-            if (selected && n.id !== selected.id) return [];
             const label = historical ? tr('historic') : number === 1 ? tr('name')
                 : number === 2 ? tr('alternative') : number === 3 ? t('selection.thirdName')
                 : t('selection.numberedName', { number });
             return [{ label: `${n.language.toUpperCase()} · ${label}`, value: n.text,
-                badge: { text: status(n.textReview), tone: nameConfirmed(n) ? 'confirmed' : 'gov' },
-                ...(n.subjectId !== targetId ? { select: { kind: 'feature', id: n.subjectId } } : {}) }];
+                badge: { text: status(n.textReview), tone: nameConfirmed(n) ? 'confirmed' : 'gov' } }];
         });
     }
-    function describe(f, name = null) {
-        const names = name ? [name] : f.names;
-        const rows = nameRows(f.names, f.id, name);
-        const details = [{ label: 'GURS', value: sourceStatus(name?.source ?? f.source) }];
+    function describe(f) {
+        const names = f.names;
+        const rows = nameRows(names, f.id);
+        const details = [{ label: 'GURS', value: sourceStatus(f.source) }];
         for (const n of names) if (n.official && n.official !== n.text) rows.push({ label: `${tr('gurs')} · ${n.language.toUpperCase()}`, value: n.official });
-        if (name) rows.push(relation(tr('target'), f.id), { label: tr('reviewScope'), value: status(name.textReview) }, { label: getLanguage() === 'sl' ? 'Pregled povezave' : 'Attachment review', value: status(name.attachmentReview) });
+        for (const n of names) {
+            const note = n.notes?.[getLanguage()] ?? n.notes?.sl ?? n.notes?.en ?? Object.values(n.notes || {})[0];
+            if (note) details.push({ label: `${t('selection.editorNote')} ${n.text}`, value: note });
+        }
         if (f.kind === 6 && f.category) rows.push({ label: tr('kindOf'), value: t(`names.type.${f.category}`) === `names.type.${f.category}` ? t('names.type.other') : t(`names.type.${f.category}`) });
         if (f.settlementId && f.settlementId !== f.id) rows.push(relation(tr('settlement'), f.settlementId));
         if (f.municipalityId && f.municipalityId !== f.id) rows.push(relation(tr('municipality'), f.municipalityId));
         // A village's subregions and groups; a municipality's and a region's villages.
         for (const region of regionsOf.get(f.id) || []) rows.push(relation(kindName(region), region.id));
         for (const town of townsOf(f)) rows.push(relation(tr('settlement'), town.id));
+        if (f.kind === 7) for (const id of f.members) { const member = feature(id); if (member) rows.push(relation(kindName(member), id)); }
+        if (f.kind === 4) for (const house of housesOf(f.id)) rows.push(addressRow(house));
         const a = f.address;
         if (a) {
-            const street = a.streetId ? featureTitle(feature(a.streetId)) : featureTitle(feature(a.settlementId));
-            rows.push({ label: tr('address'), value: `${street} ${a.number ?? '?'}${a.suffix}` });
+            rows.push({ label: tr('address'), value: addressText(f) });
             // Other houses in the same building.
-            if (a.buildingId) for (const other of housesOf(a.buildingId)) if (other.id !== f.id) rows.push(relation(tr('address'), other.id));
+            if (a.buildingId) for (const other of housesOf(a.buildingId)) if (other.id !== f.id) rows.push(addressRow(other));
             details.push({ label: tr('postal'), value: `${a.postalCode} ${a.postalName}`.trim() }, { label: tr('community'), value: a.community }, { label: tr('school'), value: a.schoolDistrict }, { label: tr('unit'), value: a.administrativeUnit });
         }
         // A house shows its building's figures too.
@@ -141,27 +175,26 @@ export function createResolvedMap(selection) {
         const sections = [{ title: getLanguage() === 'sl' ? 'Podrobnosti' : 'Details', rows: details, fold: 'details' }];
         if (f.oldNumbers.length) sections.push({ title: tr('oldNumbers'), rows: f.oldNumbers.map(n => ({ label: n.period || tr('unknown'), value: `${n.number}${n.settlement ? `, ${n.settlement}` : ''}` })) });
         // Headed by what the place is (a settlement, a house…), also when one of its names was clicked.
-        return { kind: kindName(f), title: name?.text || featureTitle(f), note: name?.notes || f.notes, rows, sections };
+        return { kind: kindName(f), title: featureTitle(f), note: f.notes, rows, sections };
     }
     // A municipality's or a region's settlements, by name.
     const townsOf = f => (f.kind === 1 ? towns.get(f.id) || [] : f.kind === REGION ? f.members.map(feature).filter(Boolean) : []).slice().sort((a, b) => featureTitle(a).localeCompare(featureTitle(b)));
     // The building a house (an address) stands in, when it is loaded.
     const buildingOf = f => f?.address?.buildingId ? feature(f.address.buildingId) || null : null;
     // The houses in a building, by number.
-    const byNumber = (a, b) => (a.address.number ?? Infinity) - (b.address.number ?? Infinity) || a.address.suffix.localeCompare(b.address.suffix);
+    const byNumber = (a, b) => (a.address.number ?? Infinity) - (b.address.number ?? Infinity) || (a.address.suffix || '').localeCompare(b.address.suffix || '') || a.id.localeCompare(b.id);
     const housesOf = id => (houses.get(id) || []).slice().sort(byNumber);
     // A house is one thing: its building, the building's name and its number all select the
-    // house (the first, where a building has several). Also for data loaded since the last render.
-    const houseOf = f => f?.kind !== 4 ? null : housesOf(f.id)[0] || [...repository.features.values()].filter(h => h.kind === 5 && h.address?.buildingId === f.id && shown(h)).sort(byNumber)[0] || null;
-    const isHouse = id => { const f = feature(id); return f?.kind === 5 || !!houseOf(f); };
+    // house only when there is exactly one. A multi-address building keeps all its houses.
+    const houseOf = f => f?.kind === 4 && housesOf(f.id).length === 1 ? housesOf(f.id)[0] : null;
     // What a house's one label says: the name it shows (its own or its building's) and its number.
-    const houseLabel = (f, name = null) => ({
+    const houseLabel = f => ({
         house: true,
-        name: view.houseNames === false || view.building === false ? '' : (name || primaryName(f, language))?.text || '',
+        name: view.houseNames === false || view.building === false ? '' : primaryName(f, language)?.text || '',
         number: view.houseNumbers === false || f.address?.number == null ? '' : `${f.address.number}${f.address.suffix}`,
     });
-    function highlight(f, name = null) {
-        selected = f ? { feature: f, name } : null;
+    function highlight(f) {
+        selected = f ? { feature: f } : null;
         const targets = f?.kind === 7 ? f.members.map(id => feature(id)).filter(Boolean) : f ? [f] : [];
         // A house is drawn with its building.
         if (buildingOf(f)) targets.push(buildingOf(f));
@@ -170,9 +203,9 @@ export function createResolvedMap(selection) {
         // Its own label is hidden (markSelected) and drawn here instead. A house's says what its
         // label says, its name and its number, without a dot.
         const house = f?.kind === 4 || f?.kind === 5;
-        const text = (name || (f ? primaryName(f, language) : null))?.text;
+        const text = (f ? primaryName(f, language) : null)?.text;
         // The marker is the selected thing to a click as well (markAt): clicking it again unselects it.
-        const own = { id: f?.id, use: house ? '' : name?.id || '', kind: f?.kind };
+        const own = { id: f?.id, use: '', kind: f?.kind };
         // An area (a village, a municipality, a region, a field) has no point: its name stays at its centre.
         const area = !house && ['Polygon', 'MultiPolygon'].includes(f?.geometry?.type);
         const markers = f?.position ? [geo(point(f.position), house ? { ...own, house, name: text || '', number: f.address?.number == null ? '' : `${f.address.number}${f.address.suffix}` } : { ...own, area, label: text || featureTitle(f) })] : [];
@@ -191,15 +224,19 @@ export function createResolvedMap(selection) {
     }
     function layer(value) { map.addLayer(value, beforeId); layerIds.push(value.id); }
     function queueRender() { if (renderQueued || disposed) return; renderQueued = true; requestAnimationFrame(() => { renderQueued = false; render(); }); }
+    function queuePanelRefresh() {
+        if (panelQueued || !selected) return;
+        panelQueued = true;
+        requestAnimationFrame(() => { panelQueued = false; Promise.resolve(selection.refresh?.()).catch(error); });
+    }
     function render() {
         if (!map?.getSource('tb-labels')) return;
         const shapes = [], labelFeatures = [], numbers = [];
-        houses = new Map(); towns = new Map(); regionsOf = new Map();
+        indexHouses(); towns = new Map(); regionsOf = new Map();
         const add = (index, key, value) => (index.get(key) || index.set(key, []).get(key)).push(value);
         for (const f of repository.features.values()) {
             // The map's own regions only decide what the map covers (regions.js).
             if (!shown(f) || isMapRegion(f)) continue;
-            if (f.kind === 5 && f.address?.buildingId) add(houses, f.address.buildingId, f);
             if (f.kind === 2 && f.municipalityId) add(towns, f.municipalityId, f);
             if (f.kind === REGION) for (const id of f.members) add(regionsOf, id, f);
             const area = f.kind >= 6 && isArea(f) ? areaZooms(f.bounds) : null;
@@ -231,7 +268,7 @@ export function createResolvedMap(selection) {
         const progress = f => ({ p: f.progress.total ? f.progress.done / f.progress.total : 0, label: `${f.progress.total ? Math.floor(f.progress.done / f.progress.total * 100) : 0} % · ${f.progress.done}/${f.progress.total}` });
         map.getSource('tb-progress').setData(collection(settlements.filter(f => f.geometry).map(f => geo(f.geometry, progress(f)))));
         map.getSource('tb-progress-labels').setData(collection(settlements.filter(f => f.position).map(f => geo(point(f.position), progress(f)))));
-        if (selected) { const f = feature(selected.feature.id); highlight(f || null, selected.name ? repository.names.get(selected.name.id) : null); }
+        if (selected) { const f = feature(selected.feature.id); highlight(f || null); }
         setMask();
         const border = region().border;
         if (border !== shownBorder) { shownBorder = border; map.getSource('tb-state-border').setData(border ? collection([geo(border, {})]) : empty()); }
@@ -272,50 +309,57 @@ export function createResolvedMap(selection) {
         const box = map.getBounds();
         const settlements = [...repository.features.values()].filter(f => f.kind === 2 && shown(f) && f.bounds && f.bounds[0] <= box.getEast() && f.bounds[2] >= box.getWest() && f.bounds[1] <= box.getNorth() && f.bounds[3] >= box.getSouth());
         // Limit concurrent downloads while quickly panning across village boundaries.
-        for (let i = 0; i < settlements.length; i += 4) await Promise.all(settlements.slice(i, i + 4).map(async s => {
+        for (let i = 0; i < settlements.length; i += 4) {
+            if (generation !== repository.generation) return;
+            await Promise.all(settlements.slice(i, i + 4).map(async s => {
             if ((loadErrors.get(s.id) || 0) > Date.now() - 5000) return;
             try { await repository.loadArea(s.id);loadErrors.delete(s.id); } catch (e) { if (generation !== repository.generation) return; loadErrors.set(s.id, Date.now());error(e); }
-        }));
+            }));
+        }
     }
     function addSearch() {
         searchRoot = document.createElement('div');searchRoot.className = 'tb-search';
         const input = document.createElement('input');input.type = 'search';input.placeholder = tr('search');input.setAttribute('aria-label', tr('search'));
         const results = document.createElement('div');results.className = 'tb-search-results';results.hidden = true;searchRoot.append(input, results);map.getContainer().append(searchRoot);
         let request = 0, timer;
+        cancelSearch = () => { ++request; clearTimeout(timer); results.hidden = true; results.replaceChildren(); input.value = ''; };
         // The search data is fetched once someone starts to search, not with the map: from the
         // focus rather than the first letters, which then wait less. (A failed fetch is tried again.)
         input.addEventListener('focus', () => repository.loadSearch().catch(() => {}));
-        input.addEventListener('input', () => { clearTimeout(timer);const mine = ++request;timer = setTimeout(async () => {
+        input.addEventListener('input', () => { clearTimeout(timer);const mine = ++request, generation = repository.generation;timer = setTimeout(async () => {
             const query = normalize(input.value.trim());if (!query) { results.hidden = true;return; }
             results.hidden = false;results.textContent = tr('searchLoading');
             try {
-                await repository.loadSearch();if (mine !== request) return;
+                await repository.loadSearch();if (mine !== request || generation !== repository.generation) return;
                 // What is called what was typed comes first, then what is called something starting with
                 // it, then the rest that matches (such as each house of a village starting with it).
                 const closeness = text => { const t = normalize(text); return t === query ? 0 : t.startsWith(query) ? 1 : 2; };
-                // search.dat holds what map.dat does not; an area file's copy of a hint is the same thing.
-                const candidates = [...new Map([...repository.searchFeatures, ...repository.features]).values()].map(f => {
-                    if (f.kind === 4 && !f.names.some(n => n.current) && normalize(f.legacyId) !== query) return { match: false };
-                    const parent = feature(f.settlementId), address = f.address ? `${f.address.number ?? ''}${f.address.suffix}` : '';
-                    const terms = [featureTitle(f), parent ? featureTitle(parent) : '', address, f.legacyId];
-                    const hay = normalize(terms.join(' '));const tokens = query.split(/\s+/);return { f, rank: closeness(featureTitle(f)), match: tokens.every(t => hay.includes(t)) };
-                }).filter(m => m.match && shown(m.f) && !isMapRegion(m.f));
-                for (const name of repository.names.values()) {
-                    const target = feature(name.subjectId), hay = normalize(`${name.text} ${target?.settlementId ? featureTitle(feature(target.settlementId)) : ''}`);
-                    if (target && shown(target) && !isMapRegion(target) && query.split(/\s+/).every(t => hay.includes(t))) candidates.push({ f: target, name, rank: closeness(name.text) - (normalize(name.text) === query) });
+                // Search every applicable name of the complete place, never a parallel name record.
+                indexHouses();
+                const places = new Map();
+                for (const source of allFeatures()) {
+                    if (!shown(source) || isMapRegion(source)) continue;
+                    const f = houseOf(source) || source;
+                    const entry = places.get(f.id) || { f, identifiers: [] };
+                    if (source.legacyId) entry.identifiers.push(source.legacyId);
+                    places.set(f.id, entry);
                 }
-                // Each thing is listed once: by its names where one is listed (Goričko · Ime), and
-                // only otherwise as itself, such as a house by its number.
-                // A house and its building are one thing, the house showing the building's name.
-                const thing = f => f.kind === 5 && f.address?.buildingId || f.id;
-                const named = new Set(candidates.filter(c => c.name).map(c => thing(c.f)));
-                const matches = candidates.filter(c => c.name || !named.has(thing(c.f))).sort((a, b) => a.rank - b.rank || (a.name?.text || featureTitle(a.f)).localeCompare(b.name?.text || featureTitle(b.f))).slice(0, 35);
+                const tokens = query.split(/\s+/);
+                const matches = [...places.values()].map(({ f, identifiers }) => {
+                    const names = orderedNames(f, language), parent = feature(f.settlementId);
+                    const address = f.address ? addressText(f) : '';
+                    const hay = normalize([featureTitle(f), ...names.map(n => n.text), parent ? featureTitle(parent) : '', address, ...identifiers].join(' '));
+                    const name = names.slice().sort((a, b) => closeness(a.text) - closeness(b.text))[0];
+                    return { f, name, rank: Math.min(closeness(featureTitle(f)), name ? closeness(name.text) : 2), match: tokens.every(t => hay.includes(t)) };
+                }).filter(m => m.match).sort((a, b) => a.rank - b.rank || featureTitle(a.f).localeCompare(featureTitle(b.f))).slice(0, 35);
                 results.replaceChildren();if (!matches.length) results.textContent = tr('noResults');
                 for (const { f, name } of matches) {
-                    const button = document.createElement('button');button.type = 'button';button.textContent = `${name?.text || featureTitle(f)} · ${name ? tr('name') + (name.current ? '' : ` (${tr('historic')})`) : kindName(f)}${f.settlementId && f.settlementId !== f.id ? ` · ${featureTitle(feature(f.settlementId))}` : ''}`;
-                    button.addEventListener('click', () => { selection.select(name ? 'name' : 'feature', name?.id || f.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);
+                    const context = f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
+                    const alias = name && name.text !== featureTitle(f) && normalize(name.text).includes(query) ? ` · ${name.text}${name.current ? '' : ` (${tr('historic')})`}` : '';
+                    const button = document.createElement('button');button.type = 'button';button.textContent = `${featureTitle(f)} · ${kindName(f)}${context ? ` · ${context}` : ''}${alias}`;
+                    button.addEventListener('click', () => { selection.select('feature', f.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);
                 }
-            } catch (e) { if (mine === request) { results.textContent = tr('searchError');console.error(e); } }
+            } catch (e) { if (mine === request && generation === repository.generation) { results.textContent = tr('searchError');console.error(e); } }
         }, 150); });
         input.addEventListener('keydown', e => { if (e.key === 'Escape') { ++request;results.hidden = true;input.blur(); } });
     }
@@ -387,17 +431,20 @@ export function createResolvedMap(selection) {
             selection.register('feature', { priority: 1, hit: (p, lngLat) => {
                 if (pickingTowns) { const town = lngLat && townAt(lngLat); if (town) return { id: town.id, label: false }; }
                 // A house's name is the house too, not a name to select on its own.
-                const mark = markAt(p), own = h => !h.properties.use || isHouse(h.properties.id);
-                const hit = mark ? (own(mark) ? mark : null) : map.queryRenderedFeatures(p, { layers: areaLayers.filter(id => map.getLayer(id)) }).find(h => h.properties?.id && own(h));
+                const mark = markAt(p);
+                const hit = mark || map.queryRenderedFeatures(p, { layers: areaLayers.filter(id => map.getLayer(id)) }).find(h => h.properties?.id);
                 if (!hit) return null;
                 return { id: houseOf(feature(hit.properties.id))?.id || hit.properties.id, label: !!mark };
-            }, get: async id => { const f = await repository.get(id); if (f?.kind === 7) await Promise.all(f.members.map(id => repository.get(id))); if (f?.address?.buildingId) await repository.get(f.address.buildingId).catch(() => null); return houseOf(f) || f; }, describe, highlight, bounds, maxZoom: 18 });
-            selection.register('name', { priority: 5, hit: p => {
-                // While villages are chosen, a municipality's name stands for all its villages.
-                const hit = markAt(p);
-                return hit?.properties.use && !isHouse(hit.properties.id) && (!pickingTowns || hit.properties.kind === 1) ? { id: hit.properties.use, label: true } : null;
-            }, get: async id => { await repository.loadMap();const name = repository.names.get(id);const target = name ? await repository.get(name.subjectId) : null;return name && target ? { name, feature: houseOf(target) || target } : null; }, describe: e => describe(e.feature, e.name), highlight: e => highlight(e?.feature, e?.name), bounds: e => bounds(e.feature), maxZoom: 18 });
-            repository.onChange(queueRender);map.on('moveend', () => loadVisible());map.on('zoom', () => applyVisibility());
+            }, get: getFeature, canonical, describe, highlight, bounds, error, maxZoom: 18 });
+            // The native editor can focus a name for editing, but the map always opens its place.
+            selection.register('name', { canonical, error, get: async id => {
+                const generation = repository.generation;
+                await repository.loadMap();
+                if (generation !== repository.generation) { const e = new Error('This name belongs to an earlier preview'); e.code = 'STALE_PREVIEW'; throw e; }
+                const name = repository.names.get(id);
+                return name ? getFeature(name.subjectId) : null;
+            } });
+            repository.onChange(() => { queueRender(); queuePanelRefresh(); });map.on('moveend', () => loadVisible());map.on('zoom', () => applyVisibility());
             // Drawn on the next frame, with the mode, language and view that map.js sets just after this:
             // each drawing has MapLibre lay out all of it again.
             queueRender();addSearch();loadVisible();
@@ -413,7 +460,7 @@ export function createResolvedMap(selection) {
         setLanguage(value) { language = value;queueRender();renderProgressLegend();if (searchRoot) { searchRoot.querySelector('input').placeholder = tr('search');searchRoot.querySelector('input').setAttribute('aria-label', tr('search')); } },
         applyView(value) { view = value;queueRender();loadVisible(); },
         async refreshNames() { await repository.loadMap();queueRender(); },
-        async reload(base) { repository.reset(base);const generation = repository.generation;try { await repository.loadMap();if (generation !== repository.generation) return;render();await loadVisible();if (generation === repository.generation) await selection.refresh(); } catch (e) { if (generation === repository.generation) error(e); } },
+        async reload(base) { cancelSearch(); selection.clear?.(); selected = null; repository.reset(base);const generation = repository.generation;try { await repository.loadMap();if (generation !== repository.generation) return;render();await loadVisible(); } catch (e) { if (generation === repository.generation) error(e); } },
         buildingOutline(id) { return feature(id)?.geometry || null; },
         // The editor chooses a region's villages: a click anywhere in a village selects it.
         setPickingTowns(on) { pickingTowns = !!on; },
