@@ -21,6 +21,14 @@ export default {
     about: {
         title: 'O projektu',
         body: 'Burgola Prekmurje Map je interaktivni zemljevid Prekmurja: njegovih občin, vasi, hiš in domačih imen gričev, polj in domačij. Kmalu bo še več.',
+        useTitle: 'Kako uporabljati zemljevid',
+        tips: {
+            click: 'Kliknite katero koli ime, hišo, vas ali podjetje na zemljevidu, da vidite, kaj je; njegova kartica vodi naprej do krajev okoli njega.',
+            search: 'Iščite imena, hišna imena, naslove ali koordinate (46.66, 16.16). S tipko / začnete pisati.',
+            link: 'Naslov strani pove, kateri kraj ste izbrali: Kopiraj povezavo na njegovi kartici ga kopira, da ga delite.',
+            settings: 'Gumb z nastavitvami pod gumboma za povečavo izbere, kaj zemljevid kaže in kako veliko je besedilo.',
+            location: 'Na telefonu gumb za lokacijo pokaže, kje ste.',
+        },
     },
     // "Oblikovala <Vladimir Januš> in Tim Bunderla" (dvojina) — imena in
     // povezava so v index.html in js/map/map.js.
