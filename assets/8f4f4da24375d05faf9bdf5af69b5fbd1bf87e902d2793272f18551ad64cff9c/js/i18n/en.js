@@ -255,6 +255,8 @@ export default {
         // a business in one of our buildings, on the building's card
         here: 'In this building',
         source: 'Source',
+        // opens openstreetmap.org at the label, where a business's own details are
+        openOsm: 'Open in OpenStreetMap',
         // what a label is, by its OpenStreetMap class or subclass
         kind: {
             poi: 'Point of interest',

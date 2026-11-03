@@ -258,6 +258,7 @@ export default {
     background: {
         here: 'V stavbi',
         source: 'Vir',
+        openOsm: 'Odpri v OpenStreetMap',
         kind: {
             poi: 'Zanimiva točka',
             road: 'Cesta',

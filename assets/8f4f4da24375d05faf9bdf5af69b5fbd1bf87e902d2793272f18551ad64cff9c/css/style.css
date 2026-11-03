@@ -741,6 +741,7 @@ main {
 }
 
 .sp-action { border-color: var(--accent); color: var(--accent); }
+a.sp-action { text-decoration: none; }
 .sp-zoom:hover { border-color: var(--text-muted); }
 .sp-action:hover { background: var(--accent-soft); }
 
