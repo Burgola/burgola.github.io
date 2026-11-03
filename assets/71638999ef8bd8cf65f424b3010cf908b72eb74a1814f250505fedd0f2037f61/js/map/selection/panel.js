@@ -15,7 +15,8 @@
 //                                                 fold: 'key' = it opens and
 //                                                 closes, remembered per key
 //     list:     { title, items: [{ label, select }] },   chips, e.g. settlements
-//     actions:  [{ label, select }],              buttons next to "Zoom to"
+//     actions:  [{ label, select | href }],       buttons next to "Zoom to", or
+//                                                 links to another site
 //     background: true                            one of the base map's own
 //                                                 labels (background.js): the
 //                                                 editor client shows its card too
@@ -92,6 +93,14 @@ export function createSelectionPanel(root) {
         return dl;
     }
 
+    function away({ label, href }) {
+        const a = node('a', 'sp-action', label);
+        a.href = href;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        return a;
+    }
+
     // The page address, which names the selected place (link.js), to the clipboard.
     function copyLink() {
         const b = node('button', 'sp-action', t('selection.copyLink'));
@@ -132,7 +141,7 @@ export function createSelectionPanel(root) {
 
         el.actions.replaceChildren(el.zoom);
         el.zoom.textContent = t('selection.zoomTo');
-        for (const action of view.actions || []) el.actions.append(linkTo(action.label, action.select, 'sp-action'));
+        for (const action of view.actions || []) el.actions.append(action.href ? away(action) : linkTo(action.label, action.select, 'sp-action'));
         if (handlers.linkable()) el.actions.append(copyLink());
 
         root.scrollTop = 0;

@@ -196,7 +196,10 @@ export function createBackground(selection, ourLabel = () => null) {
         if (building) rows.push({ label: t('house.building'), value: ourLabel(building.id) || title(building, getLanguage()), select: { kind: 'feature', id: building.id } });
         if (settlement) rows.push({ label: t('selection.naselje'), value: title(settlement, getLanguage()), select: { kind: 'feature', id: settlement.id } });
         rows.push({ label: t('background.source'), value: 'OpenStreetMap' });
-        return { kind: kindOf(e), title: text, rows, background: true };
+        // Its own details (opening hours, a website, ...) are on OpenStreetMap, not in the tiles.
+        const [lng, lat] = e.position.map(n => n.toFixed(6));
+        const actions = [{ label: t('background.openOsm'), href: `https://www.openstreetmap.org/query?lat=${lat}&lon=${lng}#map=19/${lat}/${lng}` }];
+        return { kind: kindOf(e), title: text, rows, actions, background: true };
     }
 
     function highlight(e) {

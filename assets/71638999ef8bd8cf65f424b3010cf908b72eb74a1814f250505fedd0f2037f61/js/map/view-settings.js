@@ -61,8 +61,9 @@ export function setView(changes) {
     for (const fn of listeners) fn(view);
 }
 
+// The menu's Reset. Porabje is switched in the top bar, not in the menu, and stays as it is.
 export function resetView() {
-    setView(VIEW_DEFAULTS);
+    setView({ ...VIEW_DEFAULTS, porabje: view.porabje });
 }
 
 export function onViewChange(fn) {
