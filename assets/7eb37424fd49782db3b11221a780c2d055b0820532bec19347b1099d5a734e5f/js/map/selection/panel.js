@@ -39,7 +39,7 @@ export function createSelectionPanel(root) {
         zoom: root.querySelector('.sp-zoom'),
         close: root.querySelector('.sp-close'),
     };
-    const handlers = { close: () => {}, zoom: () => {}, select: () => {} };
+    const handlers = { close: () => {}, zoom: () => {}, select: () => {}, linkable: () => false };
 
     el.close.addEventListener('click', () => handlers.close());
     el.zoom.addEventListener('click', () => handlers.zoom());
@@ -92,6 +92,18 @@ export function createSelectionPanel(root) {
         return dl;
     }
 
+    // The page address, which names the selected place (link.js), to the clipboard.
+    function copyLink() {
+        const b = node('button', 'sp-action', t('selection.copyLink'));
+        b.type = 'button';
+        b.addEventListener('click', async () => {
+            try { await navigator.clipboard.writeText(location.href); } catch { window.prompt(t('selection.copyLink'), location.href); return; }
+            b.textContent = t('selection.linkCopied');
+            setTimeout(() => { b.textContent = t('selection.copyLink'); }, 2000);
+        });
+        return b;
+    }
+
     function render(view) {
         root.toggleAttribute('data-background', !!view.background);
         el.kind.textContent = view.kind || '';
@@ -121,6 +133,7 @@ export function createSelectionPanel(root) {
         el.actions.replaceChildren(el.zoom);
         el.zoom.textContent = t('selection.zoomTo');
         for (const action of view.actions || []) el.actions.append(linkTo(action.label, action.select, 'sp-action'));
+        if (handlers.linkable()) el.actions.append(copyLink());
 
         root.scrollTop = 0;
     }
@@ -142,5 +155,7 @@ export function createSelectionPanel(root) {
         onClose(fn) { handlers.close = fn; },
         onZoom(fn) { handlers.zoom = fn; },
         onSelect(fn) { handlers.select = fn; },
+        // Whether the selected thing can be linked to: a Copy link button then shows.
+        setLinkable(fn) { handlers.linkable = fn; },
     };
 }

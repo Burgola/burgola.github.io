@@ -136,6 +136,8 @@ export default {
         selectObcina: 'Občina {name}',
         selectNaselje: 'Naselje {name}',
         zoomTo: 'Približaj',
+        copyLink: 'Kopiraj povezavo',
+        linkCopied: 'Povezava kopirana',
         close: 'Zapri',
     },
     house: {
