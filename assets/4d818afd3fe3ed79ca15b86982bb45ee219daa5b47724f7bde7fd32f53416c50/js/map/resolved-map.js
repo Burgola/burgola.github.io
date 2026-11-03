@@ -15,8 +15,8 @@ const buildingLabels = { en: { 0: 'Building', 1201: 'House', 1202: 'Church', 120
 // group of villages.
 const regionLabels = { en: ['Region', 'Region', 'Subregion', 'Group of villages'], sl: ['Regija', 'Regija', 'Podregija', 'Skupina vasi'] };
 const words = {
-    en: { name: 'Name', inherited: 'Inherited from target', gurs: 'GURS name', local: 'Missing from GURS', sourceAbsent: 'Absent from current GURS release', unreviewed: 'Unreviewed', confirmed: 'Confirmed', uncertain: 'Uncertain', disputed: 'Disputed', rejected: 'Rejected', unreadable: 'Unreadable', stale: 'Needs recheck', language: 'Language', role: 'Role', target: 'Named feature', settlement: 'Settlement', municipality: 'Municipality', address: 'Address', postal: 'Post office', community: 'Local community', school: 'School district', unit: 'Administrative unit', buildingNumber: 'Cadastral building number', cadastral: 'Cadastral municipality', year: 'Year built', floors: 'Floors', dwellings: 'Dwellings', businesses: 'Business premises', historic: 'Historical', current: 'Current', unknown: 'Unknown', existence: 'Existence', place: 'Place', search: 'Search places, addresses and names…', noResults: 'No results', searchError: 'Search failed. Try again.', loadError: 'Could not load local map data', kindOf: 'Kind', reviewScope: 'Name text review', locationScope: 'Location review', oldNumbers: 'Historical house numbers', preferred: 'Preferred', alternative: 'Alternative', searchLoading: 'Loading search…', coordinates: 'Coordinates', more: 'The first {shown} of {count}: type more to narrow them down' },
-    sl: { name: 'Ime', inherited: 'Podedovano od cilja', gurs: 'Ime GURS', local: 'Manjka v GURS', sourceAbsent: 'Ni v trenutni izdaji GURS', unreviewed: 'Še ni preverjeno', confirmed: 'Potrjeno', uncertain: 'Negotovo', disputed: 'Sporno', rejected: 'Zavrnjeno', unreadable: 'Nečitljivo', stale: 'Potreben ponovni pregled', language: 'Jezik', role: 'Vloga', target: 'Poimenovani objekt', settlement: 'Naselje', municipality: 'Občina', address: 'Naslov', postal: 'Pošta', community: 'Krajevna skupnost', school: 'Šolski okoliš', unit: 'Upravna enota', buildingNumber: 'Katastrska številka stavbe', cadastral: 'Katastrska občina', year: 'Leto gradnje', floors: 'Etaže', dwellings: 'Stanovanja', businesses: 'Poslovni prostori', historic: 'Zgodovinsko', current: 'Sedanje', unknown: 'Neznano', existence: 'Obstoj', place: 'Kraj', search: 'Iščite kraje, hiše in imena …', noResults: 'Ni zadetkov', searchError: 'Iskanje ni uspelo. Poskusite znova.', loadError: 'Podatkov zemljevida ni bilo mogoče naložiti', kindOf: 'Vrsta', reviewScope: 'Pregled besedila imena', locationScope: 'Pregled lokacije', oldNumbers: 'Stare hišne številke', preferred: 'Prednostno', alternative: 'Drugo ime', searchLoading: 'Nalaganje iskanja …', coordinates: 'Koordinate', more: 'Prvih {shown} od {count}: vpišite več, da jih bo manj' },
+    en: { name: 'Name', inherited: 'Inherited from target', gurs: 'GURS name', local: 'Missing from GURS', sourceAbsent: 'Absent from current GURS release', unreviewed: 'Unreviewed', confirmed: 'Confirmed', uncertain: 'Uncertain', disputed: 'Disputed', rejected: 'Rejected', unreadable: 'Unreadable', stale: 'Needs recheck', language: 'Language', role: 'Role', target: 'Named feature', settlement: 'Settlement', municipality: 'Municipality', address: 'Address', postal: 'Post office', community: 'Local community', school: 'School district', unit: 'Administrative unit', buildingNumber: 'Cadastral building number', cadastral: 'Cadastral municipality', year: 'Year built', floors: 'Floors', dwellings: 'Dwellings', businesses: 'Business premises', historic: 'Historical', current: 'Current', unknown: 'Unknown', existence: 'Existence', place: 'Place', search: 'Search places, addresses and names…', noResults: 'No results', searchError: 'Search failed. Try again.', loadError: 'Could not load local map data', kindOf: 'Kind', reviewScope: 'Name text review', locationScope: 'Location review', oldNumbers: 'Historical house numbers', preferred: 'Preferred', alternative: 'Alternative', searchLoading: 'Loading search…', coordinates: 'Coordinates', more: 'The first {shown} of {count}: type more to narrow them down', loadingHouses: 'Loading houses…' },
+    sl: { name: 'Ime', inherited: 'Podedovano od cilja', gurs: 'Ime GURS', local: 'Manjka v GURS', sourceAbsent: 'Ni v trenutni izdaji GURS', unreviewed: 'Še ni preverjeno', confirmed: 'Potrjeno', uncertain: 'Negotovo', disputed: 'Sporno', rejected: 'Zavrnjeno', unreadable: 'Nečitljivo', stale: 'Potreben ponovni pregled', language: 'Jezik', role: 'Vloga', target: 'Poimenovani objekt', settlement: 'Naselje', municipality: 'Občina', address: 'Naslov', postal: 'Pošta', community: 'Krajevna skupnost', school: 'Šolski okoliš', unit: 'Upravna enota', buildingNumber: 'Katastrska številka stavbe', cadastral: 'Katastrska občina', year: 'Leto gradnje', floors: 'Etaže', dwellings: 'Stanovanja', businesses: 'Poslovni prostori', historic: 'Zgodovinsko', current: 'Sedanje', unknown: 'Neznano', existence: 'Obstoj', place: 'Kraj', search: 'Iščite kraje, hiše in imena …', noResults: 'Ni zadetkov', searchError: 'Iskanje ni uspelo. Poskusite znova.', loadError: 'Podatkov zemljevida ni bilo mogoče naložiti', kindOf: 'Vrsta', reviewScope: 'Pregled besedila imena', locationScope: 'Pregled lokacije', oldNumbers: 'Stare hišne številke', preferred: 'Prednostno', alternative: 'Drugo ime', searchLoading: 'Nalaganje iskanja …', coordinates: 'Koordinate', more: 'Prvih {shown} od {count}: vpišite več, da jih bo manj', loadingHouses: 'Nalaganje hiš …' },
 };
 const tr = key => (words[getLanguage()] || words.en)[key] || key;
 const isRoad = f => f.kind === 6 && f.category === LocalSiteCategory.roadOrPath;
@@ -84,6 +84,13 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
     // filters were last set below: zooming only sets them again on crossing one (applyVisibility).
     let breaks = [], appliedBreaks = -1;
     let areaFailed = false; // a village's houses failed to load, and the message says so
+    // Villages whose houses are loading; after a moment a note on the map says so.
+    let loadingAreas = 0, loadingTimer = null, loadingNote = null;
+    function loadingArea(change) {
+        loadingAreas += change;
+        if (loadingAreas > 0 && !loadingTimer && loadingNote?.hidden) loadingTimer = setTimeout(() => { loadingTimer = null; if (loadingAreas > 0) loadingNote.hidden = false; }, 400);
+        if (loadingAreas === 0) { clearTimeout(loadingTimer); loadingTimer = null; if (loadingNote) loadingNote.hidden = true; }
+    }
     // Which features belong to Porabje, for the map document now loaded.
     function region() {
         if (regionsDocument !== repository.mapDocument) { regionsDocument = repository.mapDocument; regions = createRegions(regionsDocument); }
@@ -349,12 +356,14 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             if (generation !== repository.generation) return;
             await Promise.all(settlements.slice(i, i + 4).map(async s => {
             if ((loadErrors.get(s.id) || 0) > Date.now() - 5000) return;
+            loadingArea(1);
             try {
                 await repository.loadArea(s.id);loadErrors.delete(s.id);
                 // A village's houses that failed to load (the connection dropped, say) came on a later
                 // try: the message about them goes.
                 if (!loadErrors.size && areaFailed) { areaFailed = false; document.getElementById('map-message').hidden = true; }
             } catch (e) { if (generation !== repository.generation) return; loadErrors.set(s.id, Date.now());areaFailed = true;error(e); }
+            finally { loadingArea(-1); }
             }));
         }
     }
@@ -551,6 +560,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             // Drawn on the next frame, with the mode, language and view that map.js sets just after this:
             // each drawing has MapLibre lay out all of it again.
             queueRender();addSearch();loadVisible();
+            loadingNote = document.createElement('div'); loadingNote.className = 'tb-loading-houses'; loadingNote.hidden = true; loadingNote.textContent = tr('loadingHouses'); map.getContainer().append(loadingNote);
             progressLegend = document.createElement('div'); progressLegend.className = 'progress-legend'; progressLegend.hidden = true; map.getContainer().append(progressLegend); renderProgressLegend();
         },
         setMode(value) {
@@ -561,7 +571,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             map.setPaintProperty('tb-region-lines', 'line-color', ['match', ['get', 'type'], 3, REGION_COLOURS[mode].group, REGION_COLOURS[mode].subregion]);
             map.setPaintProperty('tb-region-labels', 'text-color', REGION_COLOURS[mode].text);map.setPaintProperty('tb-region-labels', 'text-halo-color', aerial ? '#202020' : '#ffffff');
         },
-        setLanguage(value) { language = value;queueRender();renderProgressLegend();refreshSearch();if (searchRoot) { searchRoot.querySelector('input').placeholder = tr('search');searchRoot.querySelector('input').setAttribute('aria-label', tr('search')); } },
+        setLanguage(value) { language = value;queueRender();renderProgressLegend();refreshSearch();if (loadingNote) loadingNote.textContent = tr('loadingHouses');if (searchRoot) { searchRoot.querySelector('input').placeholder = tr('search');searchRoot.querySelector('input').setAttribute('aria-label', tr('search')); } },
         applyView(value) { view = value;queueRender();loadVisible(); },
         async refreshNames() { await repository.loadMap();queueRender(); },
         async reload(base) { cancelSearch(); selection.clear?.(); selected = null; repository.reset(base);const generation = repository.generation;try { await repository.loadMap();if (generation !== repository.generation) return;render();await loadVisible(); } catch (e) { if (generation === repository.generation) error(e); } },
