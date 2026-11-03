@@ -245,6 +245,20 @@ export function createBackground(selection, ourLabel = () => null) {
             }
             map.addSource('tb-background-selected', { type: 'geojson', data: empty() });
             map.on('idle', follow);
+            // A business whose name has no room shows only its icon: the pointer over it names it.
+            const canvas = map.getCanvas();
+            let pointer = null;
+            canvas.addEventListener('mousemove', e => {
+                if (!pointer) requestAnimationFrame(() => {
+                    const layers = switched.pois.filter(id => map.getLayer(id)), at = pointer;
+                    pointer = null;
+                    const poi = layers.length ? map.queryRenderedFeatures([at.x, at.y], { layers })[0] : null;
+                    const e = poi && entityOf(poi, 'poi', null, null), text = e ? titleOf(e) : '', kind = e ? kindOf(e) : '';
+                    canvas.title = !e ? '' : text === kind ? kind : `${text} · ${kind}`;
+                });
+                pointer = { x: e.offsetX, y: e.offsetY };
+            });
+            canvas.addEventListener('mouseleave', () => { canvas.title = ''; });
             const under = ['tb-selected-line'].find(id => map.getLayer(id));
             map.addLayer({ id: 'tb-background-line', type: 'line', source: 'tb-background-selected', filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': SELECTED, 'line-width': 4 } }, under);
             map.addLayer({ id: 'tb-background-ring', type: 'circle', source: 'tb-background-selected', filter: ['in', ['geometry-type'], ['literal', ['Point', 'MultiPoint']]], paint: { 'circle-radius': 12, 'circle-opacity': 0, 'circle-stroke-color': SELECTED, 'circle-stroke-width': 2.5 } });

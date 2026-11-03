@@ -420,16 +420,21 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         // Results already there are written again in a newly chosen language.
         refreshSearch = () => { if (input.value?.trim() && !results.hidden) onInput(); };
         // The keyboard: Enter opens the first result (once they are there, if it came before them),
-        // the arrows go through them and back up to the box, Escape closes them.
+        // the arrows go through them and back up to the box, Escape closes them and then clears the
+        // box. It is the search's own: the place selected stays selected.
         input.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { ++request;openFirst = false;results.hidden = true;input.blur(); }
+            if (e.key === 'Escape') {
+                e.stopPropagation();++request;openFirst = false;
+                if (!results.hidden) results.hidden = true;
+                else { input.value = '';results.replaceChildren();input.blur(); }
+            }
             else if (e.key === 'Enter') { if (listed === request) results.querySelector('button')?.click(); else openFirst = true; }
             else if (e.key === 'ArrowDown' && !results.hidden) { e.preventDefault(); results.querySelector('button')?.focus(); }
         });
         results.addEventListener('keydown', e => {
             const buttons = [...results.querySelectorAll('button')], at = buttons.indexOf(document.activeElement);
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (buttons[at + (e.key === 'ArrowDown' ? 1 : -1)] || (e.key === 'ArrowUp' ? input : buttons[at]))?.focus(); }
-            else if (e.key === 'Escape') { results.hidden = true; input.focus(); }
+            else if (e.key === 'Escape') { e.stopPropagation(); results.hidden = true; input.focus(); }
         });
     }
     return {
