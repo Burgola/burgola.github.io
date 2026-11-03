@@ -345,7 +345,12 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         cancelSearch = () => { ++request; clearTimeout(timer); results.hidden = true; results.replaceChildren(); input.value = ''; };
         // The search data is fetched once someone starts to search, not with the map: from the
         // focus rather than the first letters, which then wait less. (A failed fetch is tried again.)
-        input.addEventListener('focus', () => repository.loadSearch().catch(() => {}));
+        // The results close when the map is clicked elsewhere, and open again with the box.
+        input.addEventListener('focus', () => {
+            repository.loadSearch().catch(() => {});
+            if (input.value?.trim() && results.childElementCount) results.hidden = false;
+        });
+        map.getContainer().addEventListener('pointerdown', e => { if (!searchRoot.contains(e.target)) results.hidden = true; });
         input.addEventListener('input', () => { clearTimeout(timer);const mine = ++request, generation = repository.generation;timer = setTimeout(async () => {
             const query = normalize(input.value.trim());if (!query) { results.hidden = true;return; }
             results.hidden = false;results.textContent = tr('searchLoading');

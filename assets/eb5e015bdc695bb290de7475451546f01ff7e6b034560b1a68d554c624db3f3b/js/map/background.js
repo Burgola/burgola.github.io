@@ -3,7 +3,8 @@
 // the region and their house numbers.
 //
 // They make room for ours: businesses and road names are placed after our
-// names, and a business whose name does not fit keeps its icon. Over the
+// names, a business's name goes on whichever side of its icon is free, and one
+// whose name fits on no side keeps its icon. Over the
 // aerial photo they are written as ours are. Each of them can be clicked: its
 // card says what it is, its names, and the building and village of ours it is
 // in; a street name that is one of our streets opens our street. A building of
@@ -28,6 +29,17 @@ const JOIN = { px: 12, m: 30 };
 const AERIAL = { 'text-color': '#ffffff', 'text-halo-color': '#202020', 'text-halo-width': 1.2 };
 const UNSET = { 'text-color': '#000000', 'text-halo-color': 'rgba(0, 0, 0, 0)', 'text-halo-width': 0 }; // MapLibre's own
 const SELECTED = '#f35b40';
+const SIDES = { top: [0, 1], bottom: [0, -1], left: [1, 0], right: [-1, 0] };
+
+// A business's name goes where the style puts it, or else on another side of its icon: around our
+// house numbers, which are placed first, instead of hidden whenever one of them comes near as the
+// map zooms or moves.
+function sides(layout) {
+    const own = layout['text-anchor'], [x, y] = layout['text-offset'] || [0, 0];
+    const gap = Math.max(0.6, Math.hypot(x, y));
+    const order = own in SIDES ? [own, ...Object.keys(SIDES).filter(side => side !== own)] : Object.keys(SIDES);
+    return order.flatMap(side => [side, side === own ? [x, y] : SIDES[side].map(n => Math.round(n * (SIDES[side][0] ? gap + 0.3 : gap) * 100) / 100)]);
+}
 
 const empty = () => ({ type: 'FeatureCollection', features: [] });
 const collection = features => ({ type: 'FeatureCollection', features });
@@ -216,7 +228,11 @@ export function createBackground(selection, ourLabel = () => null) {
             for (const l of style) {
                 if (!AFTER_OURS.includes(l['source-layer'])) continue;
                 if (map.getLayer('tb-names')) map.moveLayer(l.id, 'tb-names');
-                if (l['source-layer'] === 'poi' && l.layout['icon-image']) map.setLayoutProperty(l.id, 'text-optional', true);
+                if (l['source-layer'] === 'poi' && l.layout['icon-image']) {
+                    map.setLayoutProperty(l.id, 'text-variable-anchor-offset', sides(l.layout));
+                    map.setLayoutProperty(l.id, 'text-justify', 'auto');
+                    map.setLayoutProperty(l.id, 'text-optional', true);
+                }
                 // A road number is written on its shield, not on the photo.
                 if (!l.layout['icon-image'] || l['source-layer'] === 'poi')
                     written.push({ id: l.id, original: Object.fromEntries(Object.keys(AERIAL).map(key => [key, l.paint?.[key] ?? UNSET[key]])) });
