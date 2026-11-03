@@ -78,9 +78,11 @@ export function createResolvedMap(selection, businessesIn = () => []) {
     let regionsOf = new Map(); // settlement id -> the subregions and groups of villages it is in
     let pickingTowns = false; // the editor is choosing a region's villages
     let marked = null;      // the feature whose own label is hidden while it is selected
+    let listedBusinesses = ''; // the businesses the selected building's card lists
     // The zooms where something drawn appears or goes (its min or max), and how many of them the
     // filters were last set below: zooming only sets them again on crossing one (applyVisibility).
     let breaks = [], appliedBreaks = -1;
+    let areaFailed = false; // a village's houses failed to load, and the message says so
     // Which features belong to Porabje, for the map document now loaded.
     function region() {
         if (regionsDocument !== repository.mapDocument) { regionsDocument = repository.mapDocument; regions = createRegions(regionsDocument); }
@@ -182,7 +184,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         // A building's house numbers, each with its street or village.
         if (f.kind === 4) for (const house of housesOf(f.id)) rows.push({ label: tr('address'), value: addressText(house) });
         // And what is in it, by the base map.
-        if (f.kind === 4) rows.push(...businessesIn(f));
+        if (f.kind === 4) { const inside = businessesIn(f); rows.push(...inside); listedBusinesses = inside.map(r => r.value).join('|'); }
         const a = f.address || housesOf(f.id)[0]?.address;
         if (a) {
             if (f.address) rows.push({ label: tr('address'), value: addressText(f) });
@@ -346,7 +348,12 @@ export function createResolvedMap(selection, businessesIn = () => []) {
             if (generation !== repository.generation) return;
             await Promise.all(settlements.slice(i, i + 4).map(async s => {
             if ((loadErrors.get(s.id) || 0) > Date.now() - 5000) return;
-            try { await repository.loadArea(s.id);loadErrors.delete(s.id); } catch (e) { if (generation !== repository.generation) return; loadErrors.set(s.id, Date.now());error(e); }
+            try {
+                await repository.loadArea(s.id);loadErrors.delete(s.id);
+                // A village's houses that failed to load (the connection dropped, say) came on a later
+                // try: the message about them goes.
+                if (!loadErrors.size && areaFailed) { areaFailed = false; document.getElementById('map-message').hidden = true; }
+            } catch (e) { if (generation !== repository.generation) return; loadErrors.set(s.id, Date.now());areaFailed = true;error(e); }
             }));
         }
     }
@@ -522,7 +529,11 @@ export function createResolvedMap(selection, businessesIn = () => []) {
                 const name = repository.names.get(id);
                 return name ? getFeature(name.subjectId) : null;
             } });
-            repository.onChange(() => { queueRender(); queuePanelRefresh(); });map.on('moveend', () => loadVisible());map.on('zoom', () => applyVisibility());
+            repository.onChange(() => { queueRender(); queuePanelRefresh(); });
+            // A building opened from afar (from search, say) lists its businesses once the base map
+            // there has come.
+            map.on('idle', () => { const f = selected?.feature; if (f?.kind === 4 && businessesIn(f).map(r => r.value).join('|') !== listedBusinesses) queuePanelRefresh(); });
+            map.on('moveend', () => loadVisible());map.on('zoom', () => applyVisibility());
             // Drawn on the next frame, with the mode, language and view that map.js sets just after this:
             // each drawing has MapLibre lay out all of it again.
             queueRender();addSearch();loadVisible();
