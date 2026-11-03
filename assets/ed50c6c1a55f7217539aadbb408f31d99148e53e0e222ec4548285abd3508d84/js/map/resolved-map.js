@@ -82,6 +82,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
     // The zooms where something drawn appears or goes (its min or max), and how many of them the
     // filters were last set below: zooming only sets them again on crossing one (applyVisibility).
     let breaks = [], appliedBreaks = -1;
+    let areaFailed = false; // a village's houses failed to load, and the message says so
     // Which features belong to Porabje, for the map document now loaded.
     function region() {
         if (regionsDocument !== repository.mapDocument) { regionsDocument = repository.mapDocument; regions = createRegions(regionsDocument); }
@@ -347,7 +348,12 @@ export function createResolvedMap(selection, businessesIn = () => []) {
             if (generation !== repository.generation) return;
             await Promise.all(settlements.slice(i, i + 4).map(async s => {
             if ((loadErrors.get(s.id) || 0) > Date.now() - 5000) return;
-            try { await repository.loadArea(s.id);loadErrors.delete(s.id); } catch (e) { if (generation !== repository.generation) return; loadErrors.set(s.id, Date.now());error(e); }
+            try {
+                await repository.loadArea(s.id);loadErrors.delete(s.id);
+                // A village's houses that failed to load (the connection dropped, say) came on a later
+                // try: the message about them goes.
+                if (!loadErrors.size && areaFailed) { areaFailed = false; document.getElementById('map-message').hidden = true; }
+            } catch (e) { if (generation !== repository.generation) return; loadErrors.set(s.id, Date.now());areaFailed = true;error(e); }
             }));
         }
     }

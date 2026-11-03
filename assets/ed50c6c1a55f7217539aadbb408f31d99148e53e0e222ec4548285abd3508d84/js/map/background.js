@@ -272,6 +272,9 @@ export function createBackground(selection, ourLabel = () => null) {
         applyView(view) {
             for (const [key, ids] of Object.entries(switched)) for (const id of ids)
                 if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', view[key] === false ? 'none' : 'visible');
+            // What was selected of those switched off goes with them.
+            const group = selected?.sourceLayer === 'poi' ? 'pois' : selected?.sourceLayer === 'transportation_name' && !selected.shield ? 'roadNames' : null;
+            if (group && view[group] === false) selection.clear();
         },
 
         setMode(mode) {
