@@ -15,8 +15,8 @@ const buildingLabels = { en: { 0: 'Building', 1201: 'House', 1202: 'Church', 120
 // group of villages.
 const regionLabels = { en: ['Region', 'Region', 'Subregion', 'Group of villages'], sl: ['Regija', 'Regija', 'Podregija', 'Skupina vasi'] };
 const words = {
-    en: { name: 'Name', inherited: 'Inherited from target', gurs: 'GURS name', local: 'Missing from GURS', sourceAbsent: 'Absent from current GURS release', unreviewed: 'Unreviewed', confirmed: 'Confirmed', uncertain: 'Uncertain', disputed: 'Disputed', rejected: 'Rejected', unreadable: 'Unreadable', stale: 'Needs recheck', language: 'Language', role: 'Role', target: 'Named feature', settlement: 'Settlement', municipality: 'Municipality', address: 'Address', postal: 'Post office', community: 'Local community', school: 'School district', unit: 'Administrative unit', buildingNumber: 'Cadastral building number', cadastral: 'Cadastral municipality', year: 'Year built', floors: 'Floors', dwellings: 'Dwellings', businesses: 'Business premises', historic: 'Historical', current: 'Current', unknown: 'Unknown', existence: 'Existence', place: 'Place', search: 'Search places, addresses and names…', noResults: 'No results', searchError: 'Search failed. Try again.', loadError: 'Could not load local map data', kindOf: 'Kind', reviewScope: 'Name text review', locationScope: 'Location review', oldNumbers: 'Historical house numbers', preferred: 'Preferred', alternative: 'Alternative', searchLoading: 'Loading search…', coordinates: 'Coordinates', more: 'The first {shown} of {count}: type more to narrow them down', loadingHouses: 'Loading houses…' },
-    sl: { name: 'Ime', inherited: 'Podedovano od cilja', gurs: 'Ime GURS', local: 'Manjka v GURS', sourceAbsent: 'Ni v trenutni izdaji GURS', unreviewed: 'Še ni preverjeno', confirmed: 'Potrjeno', uncertain: 'Negotovo', disputed: 'Sporno', rejected: 'Zavrnjeno', unreadable: 'Nečitljivo', stale: 'Potreben ponovni pregled', language: 'Jezik', role: 'Vloga', target: 'Poimenovani objekt', settlement: 'Naselje', municipality: 'Občina', address: 'Naslov', postal: 'Pošta', community: 'Krajevna skupnost', school: 'Šolski okoliš', unit: 'Upravna enota', buildingNumber: 'Katastrska številka stavbe', cadastral: 'Katastrska občina', year: 'Leto gradnje', floors: 'Etaže', dwellings: 'Stanovanja', businesses: 'Poslovni prostori', historic: 'Zgodovinsko', current: 'Sedanje', unknown: 'Neznano', existence: 'Obstoj', place: 'Kraj', search: 'Iščite kraje, hiše in imena …', noResults: 'Ni zadetkov', searchError: 'Iskanje ni uspelo. Poskusite znova.', loadError: 'Podatkov zemljevida ni bilo mogoče naložiti', kindOf: 'Vrsta', reviewScope: 'Pregled besedila imena', locationScope: 'Pregled lokacije', oldNumbers: 'Stare hišne številke', preferred: 'Prednostno', alternative: 'Drugo ime', searchLoading: 'Nalaganje iskanja …', coordinates: 'Koordinate', more: 'Prvih {shown} od {count}: vpišite več, da jih bo manj', loadingHouses: 'Nalaganje hiš …' },
+    en: { name: 'Name', inherited: 'Inherited from target', gurs: 'GURS name', local: 'Missing from GURS', sourceAbsent: 'Absent from current GURS release', unreviewed: 'Unreviewed', confirmed: 'Confirmed', uncertain: 'Uncertain', disputed: 'Disputed', rejected: 'Rejected', unreadable: 'Unreadable', stale: 'Needs recheck', language: 'Language', role: 'Role', target: 'Named feature', settlement: 'Settlement', municipality: 'Municipality', address: 'Address', postal: 'Post office', community: 'Local community', school: 'School district', unit: 'Administrative unit', buildingNumber: 'Cadastral building number', cadastral: 'Cadastral municipality', year: 'Year built', floors: 'Floors', dwellings: 'Dwellings', businesses: 'Business premises', historic: 'Historical', current: 'Current', unknown: 'Unknown', existence: 'Existence', place: 'Place', search: 'Search places, addresses and names…', noResults: 'No results', searchError: 'Search failed. Try again.', loadError: 'Could not load local map data', kindOf: 'Kind', reviewScope: 'Name text review', locationScope: 'Location review', oldNumbers: 'Historical house numbers', preferred: 'Preferred', alternative: 'Alternative', searchLoading: 'Loading search…', settlements: 'Settlements', coordinates: 'Coordinates', more: 'The first {shown} of {count}: type more to narrow them down', loadingHouses: 'Loading houses…' },
+    sl: { name: 'Ime', inherited: 'Podedovano od cilja', gurs: 'Ime GURS', local: 'Manjka v GURS', sourceAbsent: 'Ni v trenutni izdaji GURS', unreviewed: 'Še ni preverjeno', confirmed: 'Potrjeno', uncertain: 'Negotovo', disputed: 'Sporno', rejected: 'Zavrnjeno', unreadable: 'Nečitljivo', stale: 'Potreben ponovni pregled', language: 'Jezik', role: 'Vloga', target: 'Poimenovani objekt', settlement: 'Naselje', municipality: 'Občina', address: 'Naslov', postal: 'Pošta', community: 'Krajevna skupnost', school: 'Šolski okoliš', unit: 'Upravna enota', buildingNumber: 'Katastrska številka stavbe', cadastral: 'Katastrska občina', year: 'Leto gradnje', floors: 'Etaže', dwellings: 'Stanovanja', businesses: 'Poslovni prostori', historic: 'Zgodovinsko', current: 'Sedanje', unknown: 'Neznano', existence: 'Obstoj', place: 'Kraj', search: 'Iščite kraje, hiše in imena …', noResults: 'Ni zadetkov', searchError: 'Iskanje ni uspelo. Poskusite znova.', loadError: 'Podatkov zemljevida ni bilo mogoče naložiti', kindOf: 'Vrsta', reviewScope: 'Pregled besedila imena', locationScope: 'Pregled lokacije', oldNumbers: 'Stare hišne številke', preferred: 'Prednostno', alternative: 'Drugo ime', searchLoading: 'Nalaganje iskanja …', settlements: 'Naselja', coordinates: 'Koordinate', more: 'Prvih {shown} od {count}: vpišite več, da jih bo manj', loadingHouses: 'Nalaganje hiš …' },
 };
 const tr = key => (words[getLanguage()] || words.en)[key] || key;
 const isRoad = f => f.kind === 6 && f.category === LocalSiteCategory.roadOrPath;
@@ -187,7 +187,6 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         if (f.municipalityId && f.municipalityId !== f.id) rows.push(relation(tr('municipality'), f.municipalityId));
         // A village's subregions and groups; a municipality's and a region's villages.
         for (const region of regionsOf.get(f.id) || []) rows.push(relation(kindName(region), region.id));
-        for (const town of townsOf(f)) rows.push(relation(tr('settlement'), town.id));
         if (f.kind === 7) for (const id of f.members) { const member = feature(id); if (member) rows.push(relation(kindName(member), id)); }
         // A building's house numbers, each with its street or village.
         if (f.kind === 4) for (const house of housesOf(f.id)) rows.push({ label: tr('address'), value: addressText(house) });
@@ -207,7 +206,10 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         const sections = [{ title: getLanguage() === 'sl' ? 'Podrobnosti' : 'Details', rows: details, fold: 'details' }];
         if (f.oldNumbers.length) sections.push({ title: tr('oldNumbers'), rows: f.oldNumbers.map(n => ({ label: n.period || tr('unknown'), value: `${n.number}${n.settlement ? `, ${n.settlement}` : ''}` })) });
         // Headed by what the place is (a settlement, a house…), also when one of its names was clicked.
-        return { kind: kindName(f), title: featureTitle(f), note: f.notes, rows, sections };
+        // A municipality's or a region's villages, side by side rather than a row each.
+        const towns = townsOf(f);
+        const list = towns.length ? { title: `${tr('settlements')} (${towns.length})`, items: towns.map(town => ({ label: featureTitle(town), select: { kind: 'feature', id: town.id } })) } : undefined;
+        return { kind: kindName(f), title: placeTitle(f), note: f.notes, rows, sections, list };
     }
     // A municipality's or a region's settlements, by name.
     const townsOf = f => (f.kind === 1 ? towns.get(f.id) || [] : f.kind === REGION ? f.members.map(feature).filter(Boolean) : []).slice().sort((a, b) => featureTitle(a).localeCompare(featureTitle(b)));
@@ -220,6 +222,9 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
     const recordOf = f => f?.kind === 5 ? buildingOf(f) || f : f;
     // A building's house numbers as they read together: "12, 12a".
     const numbersOf = f => (f.kind === 5 ? [f] : housesOf(f.id)).filter(h => h.address?.number != null).map(h => `${h.address.number}${h.address.suffix}`).join(', ');
+    // What a place is called on its card and in search: a house without a name by its address
+    // (Puconci 343), not its cadastral building number.
+    const placeTitle = f => f.kind === 4 && !primaryName(f, language) && housesOf(f.id).length ? housesOf(f.id).map(addressText).join(', ') : featureTitle(f);
     // What a building's one label says: its name and its house numbers.
     const houseLabel = f => ({
         house: true,
@@ -425,9 +430,10 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
                     results.append(button);
                 }
                 for (const { f, name } of matches) {
-                    const context = f.kind === 4 && housesOf(f.id).length ? housesOf(f.id).map(addressText).join(', ') : f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
+                    const title = placeTitle(f), addressed = f.kind === 4 && housesOf(f.id).length;
+                    const context = addressed ? (primaryName(f, language) ? housesOf(f.id).map(addressText).join(', ') : '') : f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
                     const alias = name && name.text !== featureTitle(f) && normalize(name.text).includes(query) ? ` · ${name.text}${name.current ? '' : ` (${tr('historic')})`}` : '';
-                    const button = document.createElement('button');button.type = 'button';button.textContent = `${featureTitle(f)} · ${kindName(f)}${context ? ` · ${context}` : ''}${alias}`;
+                    const button = document.createElement('button');button.type = 'button';button.textContent = `${title === '—' ? '' : `${title} · `}${kindName(f)}${context ? ` · ${context}` : ''}${alias}`;
                     button.addEventListener('click', () => { selection.select('feature', f.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);
                 }
                 // More than are listed: the list says so.
@@ -526,7 +532,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             layer({ id: 'tb-road-end-labels', type: 'symbol', source: 'tb-road-ends', layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-allow-overlap': true }, paint: { 'text-color': '#244666', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
             const markLayers = ['tb-road-ends', 'tb-road-end-labels', 'tb-selected-label', 'tb-selected-marker', 'tb-region-labels', 'tb-names', 'tb-name-points', 'tb-address-labels', 'tb-admin-labels'];
             const areaLayers = ['tb-buildings', 'tb-street-lines', 'tb-road-lines', 'tb-place-fill', 'tb-place-lines', 'tb-region-lines', 'tb-settlement-lines', 'tb-municipal-lines'];
-            const NEAR = 6;
+            const NEAR = globalThis.matchMedia?.('(hover: none), (pointer: coarse)').matches ? 14 : 6; // a finger is less exact than a mouse
             const markAt = p => {
                 const layers = markLayers.filter(id => map.getLayer(id)), usable = h => h.properties?.id;
                 const exact = map.queryRenderedFeatures(p, { layers }).find(usable);
@@ -543,7 +549,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
                 const hit = mark || map.queryRenderedFeatures(p, { layers: areaLayers.filter(id => map.getLayer(id)) }).find(h => h.properties?.id);
                 if (!hit) return null;
                 return { id: recordOf(feature(hit.properties.id))?.id || hit.properties.id, label: !!mark };
-            }, get: getFeature, canonical, describe, highlight, bounds, error, maxZoom: 18 });
+            }, get: getFeature, canonical, describe, highlight, bounds, point: f => buildingOf(f)?.position || f.position || null, error, maxZoom: 18 });
             // The native editor can focus a name for editing, but the map always opens its place.
             selection.register('name', { canonical, error, get: async id => {
                 const generation = repository.generation;

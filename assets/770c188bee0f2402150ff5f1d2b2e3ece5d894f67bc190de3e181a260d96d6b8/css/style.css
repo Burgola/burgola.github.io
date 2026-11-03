@@ -29,6 +29,8 @@
 [hidden] { display: none !important; }
 
 html, body { height: 100%; }
+/* A phone's browser bar comes and goes: the page is the height of what is shown. */
+@supports (height: 100dvh) { body { height: 100dvh; } }
 
 body {
     margin: 0;
@@ -72,9 +74,13 @@ a { color: var(--accent); }
 
 .nav {
     display: flex;
+    align-items: center;
     gap: 4px;
     margin-left: auto;
 }
+
+/* Porabje and the languages, after the links (in the menu on a phone). */
+.nav-tools { display: flex; align-items: center; gap: 24px; margin-left: 20px; }
 
 .nav a {
     padding: 8px 14px;
@@ -132,6 +138,8 @@ a { color: var(--accent); }
 
 .nav-toggle {
     display: none;
+    flex: none;
+    margin-left: auto;
     width: 40px;
     height: 40px;
     padding: 10px 8px;
@@ -145,6 +153,7 @@ a { color: var(--accent); }
 
 .nav-toggle span {
     display: block;
+    width: 24px; /* a button's flex lines are not stretched to its width */
     height: 2px;
     border-radius: 1px;
     background: var(--text);
@@ -156,12 +165,10 @@ a { color: var(--accent); }
 .nav-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
 
 @media (max-width: 640px) {
-    .topbar { padding: 0 16px; gap: 10px; }
+    :root:not([data-native-editor]) { --topbar-h: 56px; }
+    .topbar { padding: 0 8px 0 16px; gap: 10px; }
     .nav-toggle { display: flex; }
-    .language-switch { margin-left: auto; }
-    .region-toggle { margin-left: auto; }
-    .region-toggle + .language-switch { margin-left: 0; }
-    /* With the Porabje check box beside it, a long site name is shortened, not wrapped. */
+    /* A long site name is shortened, not wrapped. */
     .brand { min-width: 0; }
     .brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .brand img { flex: none; }
@@ -181,7 +188,11 @@ a { color: var(--accent); }
     }
 
     .nav.open { display: flex; }
+    .nav { align-items: stretch; }
     .nav a { padding: 12px 14px; font-size: 16px; }
+    .nav-tools { justify-content: space-between; margin: 6px 0 0; padding: 12px 14px 4px; border-top: 1px solid var(--border); }
+    .region-toggle { padding: 9px 12px 9px 10px; font-size: 14px; }
+    .language-switch button { padding: 7px 14px; font-size: 14px; }
 }
 
 /* ── main views ──────────────────────────────────────────────────────────── */
@@ -379,94 +390,6 @@ main {
     .maplibregl-ctrl-attrib-button { filter: invert(1); }
 }
 
-/* Search box (js/map/search.js) */
-.map-search.maplibregl-ctrl {
-    position: relative;
-    z-index: 1; /* results over the map / photo switch below */
-    width: 310px;
-    font: 14px/1.35 'Inter', system-ui, sans-serif;
-}
-
-.map-search-box {
-    display: flex;
-    align-items: center;
-    height: 40px;
-    padding: 0 6px 0 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-}
-
-.map-search-box:focus-within { border-color: var(--accent); }
-
-.map-search-icon {
-    flex: none;
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
-    background: var(--text-muted);
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 2a8 8 0 0 1 6.32 12.9l5.39 5.4-1.42 1.4-5.39-5.38A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z'/%3E%3C/svg%3E") center / contain no-repeat;
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 2a8 8 0 0 1 6.32 12.9l5.39 5.4-1.42 1.4-5.39-5.38A8 8 0 1 1 10 2zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-.map-search-input {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--text);
-    font: inherit;
-}
-
-.map-search-input::-webkit-search-cancel-button { display: none; }
-.map-search-input::placeholder { color: var(--text-muted); }
-
-.map-search-clear {
-    flex: none;
-    width: 28px;
-    height: 28px;
-    border: 0;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 20px;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.map-search-clear:hover { background: var(--bg); color: var(--text); }
-
-.map-search-results {
-    position: absolute;
-    top: 46px;
-    left: 0;
-    right: 0;
-    max-height: min(420px, 60vh);
-    margin: 0;
-    padding: 4px;
-    overflow-y: auto;
-    list-style: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-}
-
-.map-search-result {
-    padding: 7px 10px;
-    border-radius: 7px;
-    cursor: pointer;
-}
-
-.map-search-result.active,
-.map-search-result:hover { background: var(--accent-soft); }
-
-.map-search-name { color: var(--text); font-weight: 600; }
-.map-search-sub { color: var(--text-muted); font-size: 12px; }
-.map-search-message { padding: 10px; color: var(--text-muted); }
 
 /* Map settings menu (js/map/view-control.js) */
 .view-control.maplibregl-ctrl-group { position: relative; }
@@ -766,19 +689,58 @@ a.sp-action { text-decoration: none; }
 .sp-close:hover { background: var(--bg); color: var(--text); }
 
 /* Phones: a sheet along the bottom, clear of the attribution */
+/* The card's handle is for a phone's sheet only (below). */
+.sp-handle { display: none; }
+
 @media (max-width: 640px) {
-    .map-search.maplibregl-ctrl { width: calc(100vw - 72px); }
+    /* 16px, or an iPhone zooms the page in while one types. */
+    .tb-search { font-size: 16px; }
 
     .view-menu { right: 0; top: calc(100% + 8px); width: min(290px, calc(100vw - 20px)); }
 
+    /* The card is a sheet over the bottom of the map: small at first, taller with its handle
+       (panel.js), leaving the search box in view. */
     .selection-panel {
         top: auto;
-        left: 10px;
-        right: 10px;
-        bottom: 34px;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
         width: auto;
-        max-height: 55%;
+        max-height: 45%;
+        padding-top: 0;
+        border-radius: 14px;
     }
+    .selection-panel.sp-tall { max-height: calc(100% - 76px); }
+    .sp-handle {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: block;
+        width: calc(100% + 32px);
+        height: 26px;
+        margin: 0 -16px 2px;
+        border: 0;
+        background: var(--surface);
+        cursor: grab;
+        touch-action: none;
+    }
+    .sp-handle::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 5px;
+        margin: 10px auto 0;
+        border-radius: 3px;
+        background: var(--border);
+    }
+    .sp-close { top: 22px; z-index: 2; }
+}
+
+/* Fingers: the map's buttons are larger, as are the card's links. */
+@media (hover: none), (pointer: coarse) {
+    .maplibregl-ctrl-group button { width: 40px; height: 40px; }
+    .sp-actions button, .sp-actions a { padding: 10px 14px; }
+    .sp-chip { padding: 6px 12px; }
 }
 
 .view-page { overflow-y: auto; }
@@ -816,13 +778,17 @@ a.sp-action { text-decoration: none; }
     .page { padding: 32px 16px 48px; }
     .page h1 { font-size: 26px; }
 }
-.tb-search { position:absolute;z-index:5;top:10px;left:10px;width:min(340px,calc(100% - 65px));font:14px Inter,sans-serif; }
+.tb-search { position:absolute;z-index:5;top:10px;left:10px;width:min(340px,calc(100% - 70px));font:14px Inter,sans-serif; }
 /* Open results lie over the map / photo switch below the box (a corner is z-index 6). */
 .tb-search:has(.tb-search-results:not([hidden])) { z-index:7; }
-.tb-search input { width:100%;border:1px solid #555;background:#202023;color:white;padding:12px 14px;border-radius:8px;box-shadow:0 2px 8px #0004; }
-.tb-search-results { max-height:55vh;overflow:auto;margin-top:6px;background:#202023;color:white;border-radius:8px;padding:5px; }
+/* In the page's colours, light or dark. */
+.tb-search input { width:100%;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:12px 14px;border-radius:10px;box-shadow:var(--shadow);font:inherit; }
+.tb-search input::placeholder { color:var(--text-muted); }
+.tb-search input:focus { outline:2px solid var(--accent);outline-offset:-1px; }
+.tb-search-results { max-height:55vh;overflow:auto;margin-top:6px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:5px;box-shadow:var(--shadow); }
 .tb-search-results button { display:block;width:100%;border:0;background:none;color:inherit;padding:10px;text-align:left;cursor:pointer;font:inherit; }
-.tb-search-results button:hover,.tb-search-results button:focus { background:#ffffff20; }
+.tb-search-results button { border-radius:7px; }
+.tb-search-results button:hover,.tb-search-results button:focus { background:var(--accent-soft); }
 .tb-search-note { padding:8px 10px;font-size:13px;opacity:.75; }
 /* "Loading houses…" while a village's houses come (resolved-map.js). */
 .tb-loading-houses { position:absolute;z-index:4;bottom:36px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:16px;background:#202023e6;color:#fff;font:13px Inter,sans-serif;pointer-events:none; }

@@ -39,11 +39,32 @@ export function createSelectionPanel(root) {
         actions: root.querySelector('.sp-actions'),
         zoom: root.querySelector('.sp-zoom'),
         close: root.querySelector('.sp-close'),
+        handle: root.querySelector('.sp-handle'),
     };
     const handlers = { close: () => {}, zoom: () => {}, select: () => {}, linkable: () => false };
 
     el.close.addEventListener('click', () => handlers.close());
-    el.zoom.addEventListener('click', () => handlers.zoom());
+
+    // On a phone the card is a sheet over the bottom of the map (style.css), small at first. Its
+    // handle, tapped or dragged up, makes it tall; dragged down, small again, or closes it.
+    const tall = on => root.classList?.toggle('sp-tall', on);
+    if (el.handle) {
+        let start = null, dragged = false;
+        el.handle.addEventListener('pointerdown', (e) => { start = e.clientY; dragged = false; el.handle.setPointerCapture?.(e.pointerId); });
+        el.handle.addEventListener('pointermove', (e) => { if (start != null && Math.abs(e.clientY - start) > 8) dragged = true; });
+        el.handle.addEventListener('pointerup', (e) => {
+            if (start == null) return;
+            const moved = e.clientY - start;
+            start = null;
+            if (moved < -30) tall(true);
+            else if (moved > 30) { if (root.classList?.contains('sp-tall')) tall(false); else handlers.close(); }
+        });
+        el.handle.addEventListener('pointercancel', () => { start = null; });
+        el.handle.addEventListener('click', () => { if (!dragged) tall(!root.classList?.contains('sp-tall')); });
+    }
+    let shown = null; // the thing the card is about: another one starts small again
+    // Zoom to: on a phone the card is made small first, so that the place fits above it.
+    el.zoom.addEventListener('click', () => { tall(false); handlers.zoom(); });
 
     const node = (tag, className, text) => {
         const n = document.createElement(tag);
@@ -115,6 +136,7 @@ export function createSelectionPanel(root) {
 
     function render(view) {
         root.toggleAttribute('data-background', !!view.background);
+        if (shown !== `${view.kind}|${view.title}`) { shown = `${view.kind}|${view.title}`; tall(false); }
         el.kind.textContent = view.kind || '';
         el.name.textContent = view.title || '';
 
@@ -154,6 +176,7 @@ export function createSelectionPanel(root) {
         },
         hide() {
             root.hidden = true;
+            shown = null;
         },
         // Height the panel covers at the bottom of the map when it is shown
         // as a phone sheet (see style.css), else 0.
