@@ -66,8 +66,9 @@ export function coordinatesIn(text) {
     return [[b, a], [a, b]].find(inside) || null;
 }
 const isArea = f => f.bounds && (f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon');
-// businessesIn(building): rows for the base map's businesses in one of our buildings (background.js).
-export function createResolvedMap(selection, businessesIn = () => []) {
+// businessesIn(building): rows for the base map's businesses in one of our buildings; onMap(words):
+// the base map's businesses on screen that search finds (background.js).
+export function createResolvedMap(selection, businessesIn = () => [], onMap = () => []) {
     let map, mode = 'map', language = getLanguage(), view = {}, selected = null, beforeId;
     let renderQueued = false, disposed = false, searchRoot, progressLegend, panelQueued = false;
     let cancelSearch = () => {}, refreshSearch = () => {};
@@ -412,7 +413,13 @@ export function createResolvedMap(selection, businessesIn = () => []) {
                     });
                     results.append(button);
                 }
-                if (!matches.length && !at) results.textContent = tr('noResults');
+                // Then the base map's businesses on screen, by their name or what they are.
+                const others = onMap(tokens);
+                for (const other of others) {
+                    const button = document.createElement('button');button.type = 'button';button.textContent = `${other.label} · OpenStreetMap`;
+                    button.addEventListener('click', () => { selection.select('osm', other.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);
+                }
+                if (!matches.length && !at && !others.length) results.textContent = tr('noResults');
                 for (const { f, name } of matches) {
                     const context = f.kind === 4 && housesOf(f.id).length ? housesOf(f.id).map(addressText).join(', ') : f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
                     const alias = name && name.text !== featureTitle(f) && normalize(name.text).includes(query) ? ` · ${name.text}${name.current ? '' : ` (${tr('historic')})`}` : '';
