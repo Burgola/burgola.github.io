@@ -140,7 +140,7 @@ export function initMap() {
         let resolved = null;
         const background = createBackground(selection, id => resolved?.label(id));
         if (data) {
-            resolved = createResolvedMap(selection, f => background.businessesIn(f));
+            resolved = createResolvedMap(selection, f => background.businessesIn(f), words => background.find(words));
             features.push(resolved);
         }
         features.push(background); // after ours: it moves the base map's labels under them

@@ -820,6 +820,7 @@ a.sp-action { text-decoration: none; }
 .tb-search-results { max-height:55vh;overflow:auto;margin-top:6px;background:#202023;color:white;border-radius:8px;padding:5px; }
 .tb-search-results button { display:block;width:100%;border:0;background:none;color:inherit;padding:10px;text-align:left;cursor:pointer;font:inherit; }
 .tb-search-results button:hover,.tb-search-results button:focus { background:#ffffff20; }
+.tb-search-note { padding:8px 10px;font-size:13px;opacity:.75; }
 .tb-draw-bar { position:absolute;bottom:35px;left:15px;right:15px;z-index:9;background:#20242b;color:#fff;padding:12px;border:1px solid #58a6ff;border-radius:8px;font:13px Inter,sans-serif; }
 .tb-draw-bar button { margin-left:10px;padding:8px; }
 .tb-draw-bar .tb-road-choice.active { border:2px solid #337fcc; }

@@ -282,6 +282,23 @@ export function createBackground(selection, ourLabel = () => null) {
                 if (map.getLayer(id)) map.setPaintProperty(id, key, value);
         },
 
+        // The businesses in the tiles now loaded whose names or kind have all the words typed into the
+        // search box (normalized), at most ten, each once.
+        find(words) {
+            let found = [];
+            try { found = map?.querySourceFeatures(SOURCE, { sourceLayer: 'poi' }) || []; } catch { /* the style may lack the layer */ }
+            const results = new Map();
+            for (const poi of found) {
+                if (results.size >= 10) break;
+                const e = entityOf(poi, 'poi', null, null);
+                if (!e) continue;
+                const text = titleOf(e), kind = kindOf(e), label = text === kind ? kind : `${text} · ${kind}`;
+                const hay = normalize([e.local, ...Object.values(e.names), kind].join(' '));
+                if (!results.has(label) && words.every(w => hay.includes(w))) results.set(label, { label, id: remember(e).id });
+            }
+            return [...results.values()];
+        },
+
         // The businesses in one of our buildings, as rows of its card.
         businessesIn(f) {
             if (!map || !f) return [];
