@@ -108,6 +108,9 @@ export function initMap() {
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     // On the website the whole map view can fill the screen, its search and card with it.
     if (!window.tbmapEditorOptions) map.addControl(new maplibregl.FullscreenControl({ container: document.getElementById('view-map') }), 'top-right');
+    // And it can show where the visitor is (the browser asks first): which house or field one
+    // stands by. Outside the region the button stays off, the map reaching no further.
+    if (!window.tbmapEditorOptions) map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, fitBoundsOptions: { maxZoom: 17 } }), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 120 }), 'bottom-left');
 
     map.on('error', (e) => {
