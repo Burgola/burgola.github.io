@@ -151,6 +151,13 @@ export function initMap() {
         applyView(getView());
         onViewChange(applyView);
         map.addControl(new ViewControl(), 'top-right');
+        // "/" goes to the search box from anywhere on the page but a text field.
+        document.addEventListener('keydown', (e) => {
+            const at = document.activeElement;
+            if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || at?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(at?.tagName || '')) return;
+            e.preventDefault();
+            resolved?.focusSearch();
+        });
 
         map.addControl(new BasemapControl(mode, (next) => {
             setMode(next);

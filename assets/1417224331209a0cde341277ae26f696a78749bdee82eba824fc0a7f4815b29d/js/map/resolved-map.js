@@ -59,7 +59,7 @@ const isArea = f => f.bounds && (f.geometry?.type === 'Polygon' || f.geometry?.t
 export function createResolvedMap(selection, businessesIn = () => []) {
     let map, mode = 'map', language = getLanguage(), view = {}, selected = null, beforeId;
     let renderQueued = false, disposed = false, searchRoot, progressLegend, panelQueued = false;
-    let cancelSearch = () => {};
+    let cancelSearch = () => {}, refreshSearch = () => {};
     const layerIds = [], loadErrors = new Map();
     let regions = createRegions(null), regionsDocument = null, shownBorder = null;
     let houses = new Map(); // building id -> the houses (addresses) in it
@@ -352,7 +352,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
             if (input.value?.trim() && results.childElementCount) results.hidden = false;
         });
         map.getContainer().addEventListener('pointerdown', e => { if (!searchRoot.contains(e.target)) results.hidden = true; });
-        input.addEventListener('input', () => { clearTimeout(timer);openFirst = false;const mine = ++request, generation = repository.generation;timer = setTimeout(async () => {
+        const onInput = () => { clearTimeout(timer);openFirst = false;const mine = ++request, generation = repository.generation;timer = setTimeout(async () => {
             const query = normalize(input.value.trim());if (!query) { listed = mine;openFirst = false;results.hidden = true;return; }
             results.hidden = false;results.textContent = tr('searchLoading');
             try {
@@ -388,7 +388,10 @@ export function createResolvedMap(selection, businessesIn = () => []) {
                 listed = mine;
                 if (openFirst) { openFirst = false; results.querySelector('button')?.click(); }
             } catch (e) { if (mine === request && generation === repository.generation) { results.textContent = tr('searchError');console.error(e); } }
-        }, 150); });
+        }, 150); };
+        input.addEventListener('input', onInput);
+        // Results already there are written again in a newly chosen language.
+        refreshSearch = () => { if (input.value?.trim() && !results.hidden) onInput(); };
         // The keyboard: Enter opens the first result (once they are there, if it came before them),
         // the arrows go through them and back up to the box, Escape closes them.
         input.addEventListener('keydown', e => {
@@ -500,7 +503,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
             map.setPaintProperty('tb-region-lines', 'line-color', ['match', ['get', 'type'], 3, REGION_COLOURS[mode].group, REGION_COLOURS[mode].subregion]);
             map.setPaintProperty('tb-region-labels', 'text-color', REGION_COLOURS[mode].text);map.setPaintProperty('tb-region-labels', 'text-halo-color', aerial ? '#202020' : '#ffffff');
         },
-        setLanguage(value) { language = value;queueRender();renderProgressLegend();if (searchRoot) { searchRoot.querySelector('input').placeholder = tr('search');searchRoot.querySelector('input').setAttribute('aria-label', tr('search')); } },
+        setLanguage(value) { language = value;queueRender();renderProgressLegend();refreshSearch();if (searchRoot) { searchRoot.querySelector('input').placeholder = tr('search');searchRoot.querySelector('input').setAttribute('aria-label', tr('search')); } },
         applyView(value) { view = value;queueRender();loadVisible(); },
         async refreshNames() { await repository.loadMap();queueRender(); },
         async reload(base) { cancelSearch(); selection.clear?.(); selected = null; repository.reset(base);const generation = repository.generation;try { await repository.loadMap();if (generation !== repository.generation) return;render();await loadVisible(); } catch (e) { if (generation === repository.generation) error(e); } },
@@ -513,5 +516,6 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         },
         // The editor chooses a region's villages: a click anywhere in a village selects it.
         setPickingTowns(on) { pickingTowns = !!on; },
+        focusSearch() { const input = searchRoot?.querySelector('input'); input?.focus(); input?.select(); },
     };
 }
