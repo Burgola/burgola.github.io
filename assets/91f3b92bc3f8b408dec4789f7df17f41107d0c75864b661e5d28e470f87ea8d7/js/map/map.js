@@ -106,6 +106,8 @@ export function initMap() {
 
     addCredits(map);
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+    // On the website the whole map view can fill the screen, its search and card with it.
+    if (!window.tbmapEditorOptions) map.addControl(new maplibregl.FullscreenControl({ container: document.getElementById('view-map') }), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 120 }), 'bottom-left');
 
     map.on('error', (e) => {

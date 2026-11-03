@@ -570,6 +570,9 @@ main {
 .view-menu-slider input { width: 100%; accent-color: var(--accent); }
 .view-menu-slider-ends { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 12px; }
 
+/* The map view filling the screen (the full screen button, map.js). */
+.view-map:fullscreen { width: 100%; height: 100%; background: var(--bg); }
+
 /* Card describing whatever is selected (js/map/selection/panel.js) */
 .selection-panel {
     position: absolute;
