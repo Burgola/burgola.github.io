@@ -347,8 +347,9 @@ main {
 .maplibregl-ctrl-top-right { z-index: 6; }
 .maplibregl-ctrl-top-left { top: 50px; }
 :root[data-native-editor] { --topbar-h: 0px; }
+/* The editor shows our places in its own page; a base map label's card stays on the map. */
 [data-native-editor] .topbar,
-[data-native-editor] #selection-panel { display: none !important; }
+[data-native-editor] #selection-panel:not([data-background]) { display: none !important; }
 
 /* Credits (bottom right). MapLibre's own bar is see-through white with dark
    links, while its plain text takes the page colour — unreadable over the

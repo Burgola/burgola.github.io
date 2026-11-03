@@ -18,6 +18,7 @@ import { repository } from '../data/DataRepository.js';
 import { BasemapControl } from './basemap-control.js';
 import { createAerial } from './aerial.js';
 import { createBasemap } from './basemap.js';
+import { createBackground } from './background.js';
 import { createResolvedMap } from './resolved-map.js';
 import { createEditorDrawing } from './editor-drawing.js';
 import { createEditorContext } from './editor-context.js';
@@ -40,6 +41,7 @@ const LITE = window.tbmapEditorOptions?.lite
 
 // Our layers go under the first layer after the style's last non-label
 // layer: above every fill, road, building and border line, below all labels.
+// (background.js then moves the businesses and road names under our names.)
 // (The style interleaves a few symbol layers, e.g. one-way arrows, among the
 // roads, so "first symbol layer" would be too low.)
 function labelsStartId(map) {
@@ -129,10 +131,12 @@ export function initMap() {
         const selection = createSelection(map, createSelectionPanel(document.getElementById('selection-panel')));
         const features = [createAerial(), createBasemap()];
         let resolved = null;
+        const background = createBackground(selection, id => resolved?.label(id));
         if (data) {
-            resolved = createResolvedMap(selection);
+            resolved = createResolvedMap(selection, f => background.businessesIn(f));
             features.push(resolved);
         }
+        features.push(background); // after ours: it moves the base map's labels under them
         features.push(createTextSize()); // last: it scales every label layer added before it
         for (const feature of features) feature.add(map, ctx);
 
