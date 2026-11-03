@@ -78,6 +78,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
     let regionsOf = new Map(); // settlement id -> the subregions and groups of villages it is in
     let pickingTowns = false; // the editor is choosing a region's villages
     let marked = null;      // the feature whose own label is hidden while it is selected
+    let listedBusinesses = ''; // the businesses the selected building's card lists
     // The zooms where something drawn appears or goes (its min or max), and how many of them the
     // filters were last set below: zooming only sets them again on crossing one (applyVisibility).
     let breaks = [], appliedBreaks = -1;
@@ -182,7 +183,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         // A building's house numbers, each with its street or village.
         if (f.kind === 4) for (const house of housesOf(f.id)) rows.push({ label: tr('address'), value: addressText(house) });
         // And what is in it, by the base map.
-        if (f.kind === 4) rows.push(...businessesIn(f));
+        if (f.kind === 4) { const inside = businessesIn(f); rows.push(...inside); listedBusinesses = inside.map(r => r.value).join('|'); }
         const a = f.address || housesOf(f.id)[0]?.address;
         if (a) {
             if (f.address) rows.push({ label: tr('address'), value: addressText(f) });
@@ -420,16 +421,21 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         // Results already there are written again in a newly chosen language.
         refreshSearch = () => { if (input.value?.trim() && !results.hidden) onInput(); };
         // The keyboard: Enter opens the first result (once they are there, if it came before them),
-        // the arrows go through them and back up to the box, Escape closes them.
+        // the arrows go through them and back up to the box, Escape closes them and then clears the
+        // box. It is the search's own: the place selected stays selected.
         input.addEventListener('keydown', e => {
-            if (e.key === 'Escape') { ++request;openFirst = false;results.hidden = true;input.blur(); }
+            if (e.key === 'Escape') {
+                e.stopPropagation();++request;openFirst = false;
+                if (!results.hidden) results.hidden = true;
+                else { input.value = '';results.replaceChildren();input.blur(); }
+            }
             else if (e.key === 'Enter') { if (listed === request) results.querySelector('button')?.click(); else openFirst = true; }
             else if (e.key === 'ArrowDown' && !results.hidden) { e.preventDefault(); results.querySelector('button')?.focus(); }
         });
         results.addEventListener('keydown', e => {
             const buttons = [...results.querySelectorAll('button')], at = buttons.indexOf(document.activeElement);
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (buttons[at + (e.key === 'ArrowDown' ? 1 : -1)] || (e.key === 'ArrowUp' ? input : buttons[at]))?.focus(); }
-            else if (e.key === 'Escape') { results.hidden = true; input.focus(); }
+            else if (e.key === 'Escape') { e.stopPropagation(); results.hidden = true; input.focus(); }
         });
     }
     return {
@@ -517,7 +523,11 @@ export function createResolvedMap(selection, businessesIn = () => []) {
                 const name = repository.names.get(id);
                 return name ? getFeature(name.subjectId) : null;
             } });
-            repository.onChange(() => { queueRender(); queuePanelRefresh(); });map.on('moveend', () => loadVisible());map.on('zoom', () => applyVisibility());
+            repository.onChange(() => { queueRender(); queuePanelRefresh(); });
+            // A building opened from afar (from search, say) lists its businesses once the base map
+            // there has come.
+            map.on('idle', () => { const f = selected?.feature; if (f?.kind === 4 && businessesIn(f).map(r => r.value).join('|') !== listedBusinesses) queuePanelRefresh(); });
+            map.on('moveend', () => loadVisible());map.on('zoom', () => applyVisibility());
             // Drawn on the next frame, with the mode, language and view that map.js sets just after this:
             // each drawing has MapLibre lay out all of it again.
             queueRender();addSearch();loadVisible();
