@@ -176,6 +176,8 @@ export function initMap() {
             const linked = selectedInAddress();
             window.addEventListener('tbmap:selection', e => writeSelected(e.detail?.kind === 'feature' ? e.detail.id : null));
             panel.setLinkable(() => selection.current?.kind === 'feature');
+            // The browser tab and its history say what is selected.
+            window.addEventListener('tbmap:selection', e => { document.title = e.detail?.title ? `${e.detail.title} · ${t('site.title')}` : t('site.title'); });
             if (linked) selection.select('feature', linked, { zoom: firstVisit }).then(found => { if (!found) writeSelected(null); });
         }
         map.on('resize', lock);

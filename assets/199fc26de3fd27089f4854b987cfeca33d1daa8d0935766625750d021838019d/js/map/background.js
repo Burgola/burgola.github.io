@@ -108,6 +108,7 @@ function entityOf(feature, sourceLayer, layerId, click) {
 
 export function createBackground(selection, ourLabel = () => null) {
     let map, labelLayers = [], written = [], selected = null;
+    let switched = { pois: [], roadNames: [] }; // the layers each map setting shows or hides
     const known = new Map(); // id -> the labels hovered, clicked or listed lately
     function remember(e) {
         known.delete(e.id);
@@ -227,6 +228,8 @@ export function createBackground(selection, ourLabel = () => null) {
             labelLayers = style.map(l => l.id);
             for (const l of style) {
                 if (!AFTER_OURS.includes(l['source-layer'])) continue;
+                if (l['source-layer'] === 'poi') switched.pois.push(l.id);
+                else if (l['source-layer'] === 'transportation_name' && !l.layout['icon-image']) switched.roadNames.push(l.id);
                 if (map.getLayer('tb-names')) map.moveLayer(l.id, 'tb-names');
                 if (l['source-layer'] === 'poi' && l.layout['icon-image']) {
                     map.setLayoutProperty(l.id, 'text-variable-anchor-offset', sides(l.layout));
@@ -247,6 +250,11 @@ export function createBackground(selection, ourLabel = () => null) {
                 get: id => known.get(id) || (selected?.id === id ? selected : null),
                 describe, highlight, bounds, maxZoom: 18,
             });
+        },
+
+        applyView(view) {
+            for (const [key, ids] of Object.entries(switched)) for (const id of ids)
+                if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', view[key] === false ? 'none' : 'visible');
         },
 
         setMode(mode) {

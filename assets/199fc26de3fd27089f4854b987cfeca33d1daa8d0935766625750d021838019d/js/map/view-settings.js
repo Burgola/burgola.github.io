@@ -24,6 +24,8 @@ export const VIEW_DEFAULTS = {
     road: true,           // named physical roads and paths, independently of address streets
     building: true,
     places: true,         // our own places (data/mapper/place.json)
+    pois: true,           // the base map's businesses and other points of interest (background.js)
+    roadNames: true,      // and its road and street names
     progress: false,      // settlements shaded by how much is checked (progress.js)
     namesZoom: 0,         // zoom levels later (+) or earlier (-) local names appear
     textScale: 1,         // every label on the map (text-size.js)

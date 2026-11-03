@@ -18,6 +18,7 @@ const SECTIONS = [
     { title: 'view.borders', rows: ['drzava', 'obcine', 'naselja', 'podregije', 'mask'] },
     { title: 'view.houses', rows: ['houseNumbers', 'houseNames'] },
     { title: 'view.names', sliders: ['namesZoom'], rows: ['hamlet', 'relief', 'water', 'field', 'road', 'building', 'region', 'places'] },
+    { title: 'view.basemap', rows: ['pois', 'roadNames'] },
     { title: 'view.mapping', rows: ['progress'] },
 ];
 
