@@ -4,14 +4,18 @@
 //
 //   selection.register('house', {
 //       priority,            higher wins when several kinds are under a click
-//       hit(point, lngLat),  -> { id, label: bool } | null   (label = clicked
-//                            its name, which beats any area click)
+//       hit(point, lngLat),  -> { id, label: bool, kind? } | null   (label =
+//                            clicked its name, which beats any area click;
+//                            kind = it is another kind's thing, such as a
+//                            base map's street name that is one of our streets)
 //       get(id, hint),       -> entity | null  (may return a Promise); hint is
 //                            what the caller knows to find it (search)
 //       canonical(entity),   -> optional { kind, id } redirect to the complete place
 //       describe(entity),    -> panel view (see panel.js), in the current language
 //       highlight(entity),   draw it as selected; called with null to undo
 //       bounds(entity),      -> [[w, s], [e, n]] for "Zoom to"
+//       picked: false,       optional: the editor's picking (setPicking) passes
+//                            over it (the base map's own labels)
 //       editInfo(entity),    optional, for the editor client: { gov, related }
 //                            gov = the government name (string or { sl, hu })
 //                            related = [{ kind, id, title, gov }] other mapper
@@ -126,10 +130,11 @@ export function createSelection(map, panel) {
         let area = null;
         const ordered = [...kinds.entries()].sort((a, b) => b[1].priority - a[1].priority);
         for (const [kind, def] of ordered) {
+            if (picking && def.picked === false) continue;
             const hit = def.hit?.(point, lngLat);
             if (!hit) continue;
-            if (hit.label) return { kind, id: hit.id };
-            if (!area) area = { kind, id: hit.id };
+            if (hit.label) return { kind: hit.kind || kind, id: hit.id };
+            if (!area) area = { kind: hit.kind || kind, id: hit.id };
         }
         return area;
     }

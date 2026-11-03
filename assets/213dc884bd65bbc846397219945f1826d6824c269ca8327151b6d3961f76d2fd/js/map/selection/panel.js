@@ -16,6 +16,9 @@
 //                                                 closes, remembered per key
 //     list:     { title, items: [{ label, select }] },   chips, e.g. settlements
 //     actions:  [{ label, select }],              buttons next to "Zoom to"
+//     background: true                            one of the base map's own
+//                                                 labels (background.js): the
+//                                                 editor client shows its card too
 //   }
 //
 // `select` is { kind, id }: clicking it selects that thing instead.
@@ -90,6 +93,7 @@ export function createSelectionPanel(root) {
     }
 
     function render(view) {
+        root.toggleAttribute('data-background', !!view.background);
         el.kind.textContent = view.kind || '';
         el.name.textContent = view.title || '';
 

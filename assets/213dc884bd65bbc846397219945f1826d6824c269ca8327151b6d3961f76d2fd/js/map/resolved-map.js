@@ -47,7 +47,6 @@ export function areaZooms([west, south, east, north]) {
 }
 // Places show a dot under their name from this zoom.
 const DOTS_FROM = 15;
-const ROAD_NUMBERS = 'highway-shield-non-us'; // the style's layer of road numbers outside the US
 // A house has one label and no dot: its name from HOUSE_NAMES_FROM, and from NUMBERS_FROM its
 // number with the name under it.
 const HOUSE_NAMES_FROM = 15.5, NUMBERS_FROM = 16.5;
@@ -56,7 +55,8 @@ const formatted = value => ['format', value, {}];
 const HOUSE_FAR = ['case', ['!=', ['get', 'name'], ''], formatted(['get', 'name']), formatted(['get', 'number'])];
 const HOUSE_NEAR = ['case', ['==', ['get', 'name'], ''], formatted(['get', 'number']), ['==', ['get', 'number'], ''], formatted(['get', 'name']), ['format', ['get', 'number'], { 'font-scale': 0.9 }, '\n', {}, ['get', 'name'], {}]];
 const isArea = f => f.bounds && (f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon');
-export function createResolvedMap(selection) {
+// businessesIn(building): rows for the base map's businesses in one of our buildings (background.js).
+export function createResolvedMap(selection, businessesIn = () => []) {
     let map, mode = 'map', language = getLanguage(), view = {}, selected = null, beforeId;
     let renderQueued = false, disposed = false, searchRoot, progressLegend, panelQueued = false;
     let cancelSearch = () => {};
@@ -170,6 +170,8 @@ export function createResolvedMap(selection) {
         if (f.kind === 7) for (const id of f.members) { const member = feature(id); if (member) rows.push(relation(kindName(member), id)); }
         // A building's house numbers, each with its street or village.
         if (f.kind === 4) for (const house of housesOf(f.id)) rows.push({ label: tr('address'), value: addressText(house) });
+        // And what is in it, by the base map.
+        if (f.kind === 4) rows.push(...businessesIn(f));
         const a = f.address || housesOf(f.id)[0]?.address;
         if (a) {
             if (f.address) rows.push({ label: tr('address'), value: addressText(f) });
@@ -415,9 +417,6 @@ export function createResolvedMap(selection) {
             // The layer on top is placed first: village and municipality names win over local
             // names (such as Goričko) where they would collide.
             symbol('tb-names', 'tb-labels');symbol('tb-admin-labels', 'tb-labels');symbol('tb-address-labels', 'tb-addresses');
-            // Road numbers lose to every name of ours. Above them in the style, a number would
-            // hide a name at some zooms and not others; under them it shows further along its road.
-            if (map.getLayer(ROAD_NUMBERS)) map.moveLayer(ROAD_NUMBERS, 'tb-names');
             // A house's one label: from afar its name, close up its number with the name under it.
             map.setLayoutProperty('tb-address-labels', 'text-field', houseText(HOUSE_FAR, HOUSE_NEAR));
             // From the zoom where a place shows its dot (tb-name-points), its name is just below the
@@ -487,6 +486,12 @@ export function createResolvedMap(selection) {
         async refreshNames() { await repository.loadMap();queueRender(); },
         async reload(base) { cancelSearch(); selection.clear?.(); selected = null; repository.reset(base);const generation = repository.generation;try { await repository.loadMap();if (generation !== repository.generation) return;render();await loadVisible(); } catch (e) { if (generation === repository.generation) error(e); } },
         buildingOutline(id) { return feature(id)?.geometry || null; },
+        // A place as a base map label's card names it: a building by its name and its addresses.
+        label(id) {
+            const f = feature(id);
+            if (f?.kind !== 4) return f ? featureTitle(f) : null;
+            return [primaryName(f, language)?.text, housesOf(f.id).map(addressText).join(', ')].filter(Boolean).join(' · ') || featureTitle(f);
+        },
         // The editor chooses a region's villages: a click anywhere in a village selects it.
         setPickingTowns(on) { pickingTowns = !!on; },
     };
