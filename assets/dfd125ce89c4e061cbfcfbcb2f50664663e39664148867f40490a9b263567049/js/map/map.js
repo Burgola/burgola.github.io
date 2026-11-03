@@ -24,6 +24,7 @@ import { createEditorDrawing } from './editor-drawing.js';
 import { createEditorContext } from './editor-context.js';
 import { createSelection } from './selection/selection.js';
 import { createSelectionPanel } from './selection/panel.js';
+import { selectedInAddress, writeSelected } from './selection/link.js';
 import { createTextSize } from './text-size.js';
 import { getView, setView, onViewChange } from './view-settings.js';
 import { ViewControl } from './view-control.js';
@@ -168,6 +169,13 @@ export function initMap() {
         const lock = () => lockToRegion(map, regions().bounds(getView()));
         lock();
         if (firstVisit) map.fitBounds(regions().bounds(getView()), { padding: 24, duration: 0 });
+        // On the website the selected place is in the address: a link to it opens it, zoomed to it
+        // when the link has no map position of its own.
+        if (!window.tbmapEditorOptions && data) {
+            const linked = selectedInAddress();
+            window.addEventListener('tbmap:selection', e => writeSelected(e.detail?.kind === 'feature' ? e.detail.id : null));
+            if (linked) selection.select('feature', linked, { zoom: firstVisit }).then(found => { if (!found) writeSelected(null); });
+        }
         map.on('resize', lock);
         onViewChange(lock);
 

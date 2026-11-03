@@ -2,6 +2,7 @@ import { repository, title, primaryName, orderedNames, nameConfirmed } from '../
 import { LocalSiteCategory } from '../data/DatDecoder.js';
 import { getLanguage, t } from '../i18n/i18n.js';
 import { createRegions, contains, isMapRegion, REGION } from './regions.js';
+import { CONFIG } from '../config.js';
 
 const empty = () => ({ type: 'FeatureCollection', features: [] });
 const collection = features => ({ type: 'FeatureCollection', features });
@@ -14,8 +15,8 @@ const buildingLabels = { en: { 0: 'Building', 1201: 'House', 1202: 'Church', 120
 // group of villages.
 const regionLabels = { en: ['Region', 'Region', 'Subregion', 'Group of villages'], sl: ['Regija', 'Regija', 'Podregija', 'Skupina vasi'] };
 const words = {
-    en: { name: 'Name', inherited: 'Inherited from target', gurs: 'GURS name', local: 'Missing from GURS', sourceAbsent: 'Absent from current GURS release', unreviewed: 'Unreviewed', confirmed: 'Confirmed', uncertain: 'Uncertain', disputed: 'Disputed', rejected: 'Rejected', unreadable: 'Unreadable', stale: 'Needs recheck', language: 'Language', role: 'Role', target: 'Named feature', settlement: 'Settlement', municipality: 'Municipality', address: 'Address', postal: 'Post office', community: 'Local community', school: 'School district', unit: 'Administrative unit', buildingNumber: 'Cadastral building number', cadastral: 'Cadastral municipality', year: 'Year built', floors: 'Floors', dwellings: 'Dwellings', businesses: 'Business premises', historic: 'Historical', current: 'Current', unknown: 'Unknown', existence: 'Existence', place: 'Place', search: 'Search places, addresses and names…', noResults: 'No results', searchError: 'Search failed. Try again.', loadError: 'Could not load local map data', kindOf: 'Kind', reviewScope: 'Name text review', locationScope: 'Location review', oldNumbers: 'Historical house numbers', preferred: 'Preferred', alternative: 'Alternative', searchLoading: 'Loading search…' },
-    sl: { name: 'Ime', inherited: 'Podedovano od cilja', gurs: 'Ime GURS', local: 'Manjka v GURS', sourceAbsent: 'Ni v trenutni izdaji GURS', unreviewed: 'Še ni preverjeno', confirmed: 'Potrjeno', uncertain: 'Negotovo', disputed: 'Sporno', rejected: 'Zavrnjeno', unreadable: 'Nečitljivo', stale: 'Potreben ponovni pregled', language: 'Jezik', role: 'Vloga', target: 'Poimenovani objekt', settlement: 'Naselje', municipality: 'Občina', address: 'Naslov', postal: 'Pošta', community: 'Krajevna skupnost', school: 'Šolski okoliš', unit: 'Upravna enota', buildingNumber: 'Katastrska številka stavbe', cadastral: 'Katastrska občina', year: 'Leto gradnje', floors: 'Etaže', dwellings: 'Stanovanja', businesses: 'Poslovni prostori', historic: 'Zgodovinsko', current: 'Sedanje', unknown: 'Neznano', existence: 'Obstoj', place: 'Kraj', search: 'Iščite kraje, hiše in imena …', noResults: 'Ni zadetkov', searchError: 'Iskanje ni uspelo. Poskusite znova.', loadError: 'Podatkov zemljevida ni bilo mogoče naložiti', kindOf: 'Vrsta', reviewScope: 'Pregled besedila imena', locationScope: 'Pregled lokacije', oldNumbers: 'Stare hišne številke', preferred: 'Prednostno', alternative: 'Drugo ime', searchLoading: 'Nalaganje iskanja …' },
+    en: { name: 'Name', inherited: 'Inherited from target', gurs: 'GURS name', local: 'Missing from GURS', sourceAbsent: 'Absent from current GURS release', unreviewed: 'Unreviewed', confirmed: 'Confirmed', uncertain: 'Uncertain', disputed: 'Disputed', rejected: 'Rejected', unreadable: 'Unreadable', stale: 'Needs recheck', language: 'Language', role: 'Role', target: 'Named feature', settlement: 'Settlement', municipality: 'Municipality', address: 'Address', postal: 'Post office', community: 'Local community', school: 'School district', unit: 'Administrative unit', buildingNumber: 'Cadastral building number', cadastral: 'Cadastral municipality', year: 'Year built', floors: 'Floors', dwellings: 'Dwellings', businesses: 'Business premises', historic: 'Historical', current: 'Current', unknown: 'Unknown', existence: 'Existence', place: 'Place', search: 'Search places, addresses and names…', noResults: 'No results', searchError: 'Search failed. Try again.', loadError: 'Could not load local map data', kindOf: 'Kind', reviewScope: 'Name text review', locationScope: 'Location review', oldNumbers: 'Historical house numbers', preferred: 'Preferred', alternative: 'Alternative', searchLoading: 'Loading search…', coordinates: 'Coordinates' },
+    sl: { name: 'Ime', inherited: 'Podedovano od cilja', gurs: 'Ime GURS', local: 'Manjka v GURS', sourceAbsent: 'Ni v trenutni izdaji GURS', unreviewed: 'Še ni preverjeno', confirmed: 'Potrjeno', uncertain: 'Negotovo', disputed: 'Sporno', rejected: 'Zavrnjeno', unreadable: 'Nečitljivo', stale: 'Potreben ponovni pregled', language: 'Jezik', role: 'Vloga', target: 'Poimenovani objekt', settlement: 'Naselje', municipality: 'Občina', address: 'Naslov', postal: 'Pošta', community: 'Krajevna skupnost', school: 'Šolski okoliš', unit: 'Upravna enota', buildingNumber: 'Katastrska številka stavbe', cadastral: 'Katastrska občina', year: 'Leto gradnje', floors: 'Etaže', dwellings: 'Stanovanja', businesses: 'Poslovni prostori', historic: 'Zgodovinsko', current: 'Sedanje', unknown: 'Neznano', existence: 'Obstoj', place: 'Kraj', search: 'Iščite kraje, hiše in imena …', noResults: 'Ni zadetkov', searchError: 'Iskanje ni uspelo. Poskusite znova.', loadError: 'Podatkov zemljevida ni bilo mogoče naložiti', kindOf: 'Vrsta', reviewScope: 'Pregled besedila imena', locationScope: 'Pregled lokacije', oldNumbers: 'Stare hišne številke', preferred: 'Prednostno', alternative: 'Drugo ime', searchLoading: 'Nalaganje iskanja …', coordinates: 'Koordinate' },
 };
 const tr = key => (words[getLanguage()] || words.en)[key] || key;
 const isRoad = f => f.kind === 6 && f.category === LocalSiteCategory.roadOrPath;
@@ -54,6 +55,16 @@ const houseText = (far, near) => ['step', ['zoom'], far, NUMBERS_FROM, near];
 const formatted = value => ['format', value, {}];
 const HOUSE_FAR = ['case', ['!=', ['get', 'name'], ''], formatted(['get', 'name']), formatted(['get', 'number'])];
 const HOUSE_NEAR = ['case', ['==', ['get', 'name'], ''], formatted(['get', 'number']), ['==', ['get', 'number'], ''], formatted(['get', 'name']), ['format', ['get', 'number'], { 'font-scale': 0.9 }, '\n', {}, ['get', 'name'], {}]];
+// A point typed into the search box: two numbers, latitude and longitude in either order, with a
+// decimal point or comma, near enough to the region to be meant for it. [lng, lat] or null.
+export function coordinatesIn(text) {
+    const m = /^\s*(-?\d{1,3}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*$/.exec(text);
+    if (!m) return null;
+    const [a, b] = [m[1], m[2]].map(v => Number(v.replace(',', '.')));
+    const [[west, south], [east, north]] = CONFIG.regionBounds, near = 0.5;
+    const inside = ([lng, lat]) => lng >= west - near && lng <= east + near && lat >= south - near && lat <= north + near;
+    return [[b, a], [a, b]].find(inside) || null;
+}
 const isArea = f => f.bounds && (f.geometry?.type === 'Polygon' || f.geometry?.type === 'MultiPolygon');
 // businessesIn(building): rows for the base map's businesses in one of our buildings (background.js).
 export function createResolvedMap(selection, businessesIn = () => []) {
@@ -378,7 +389,21 @@ export function createResolvedMap(selection, businessesIn = () => []) {
                     const name = names.slice().sort((a, b) => closeness(a.text) - closeness(b.text))[0];
                     return { f, name, rank: Math.min(closeness(featureTitle(f)), name ? closeness(name.text) : 2), match: tokens.every(t => hay.includes(t)) };
                 }).filter(m => m.match).sort((a, b) => a.rank - b.rank || featureTitle(a.f).localeCompare(featureTitle(b.f))).slice(0, 35);
-                results.replaceChildren();if (!matches.length) results.textContent = tr('noResults');
+                results.replaceChildren();
+                // A point typed in is a place to go to, shown with a pin until the next click on the map.
+                const at = coordinatesIn(input.value);
+                if (at) {
+                    const button = document.createElement('button');button.type = 'button';button.textContent = `${tr('coordinates')} · ${at[1].toFixed(5)}, ${at[0].toFixed(5)}`;
+                    button.addEventListener('click', () => {
+                        selection.clear?.();
+                        map.getSource('tb-search-point')?.setData(collection([geo(point(at), {})]));
+                        map.flyTo({ center: at, zoom: Math.max(map.getZoom(), 16), duration: 700 });
+                        map.once('click', () => map.getSource('tb-search-point')?.setData(empty()));
+                        results.hidden = true;input.blur();
+                    });
+                    results.append(button);
+                }
+                if (!matches.length && !at) results.textContent = tr('noResults');
                 for (const { f, name } of matches) {
                     const context = f.kind === 4 && housesOf(f.id).length ? housesOf(f.id).map(addressText).join(', ') : f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
                     const alias = name && name.text !== featureTitle(f) && normalize(name.text).includes(query) ? ` · ${name.text}${name.current ? '' : ` (${tr('historic')})`}` : '';
@@ -409,7 +434,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         add(mapInstance, context) {
             map = mapInstance;beforeId = context.beforeId;
             // Labels are known by their feature's id, to hide the selected one (markSelected).
-            for (const id of ['tb-shapes', 'tb-labels', 'tb-addresses', 'tb-selected-shape', 'tb-selected-point', 'tb-road-ends', 'tb-mask', 'tb-progress', 'tb-progress-labels', 'tb-state-border']) map.addSource(id, { type: 'geojson', data: empty(), ...(LABEL_SOURCES.includes(id) ? { promoteId: 'id' } : {}) });
+            for (const id of ['tb-shapes', 'tb-labels', 'tb-addresses', 'tb-selected-shape', 'tb-selected-point', 'tb-road-ends', 'tb-mask', 'tb-progress', 'tb-progress-labels', 'tb-state-border', 'tb-search-point']) map.addSource(id, { type: 'geojson', data: empty(), ...(LABEL_SOURCES.includes(id) ? { promoteId: 'id' } : {}) });
             setMask();
             layer({ id: 'tb-region-mask', type: 'fill', source: 'tb-mask', paint: { 'fill-color': '#15171c', 'fill-opacity': 0.4 } });
             const progressColor = ['interpolate', ['linear'], ['get', 'p'], 0, '#d93025', 0.5, '#f2b705', 1, '#1e8e3e'];
@@ -460,6 +485,7 @@ export function createResolvedMap(selection, businessesIn = () => []) {
             // a few pixels of it, the nearest first: a dot is small and text is thin, and a click
             // just beside one is meant for it. Areas and lines count only right under the pointer.
             layer({ id: 'tb-road-ends', type: 'circle', source: 'tb-road-ends', paint: { 'circle-color': ['match', ['get', 'end'], 'start', '#218c54', '#d64b40'], 'circle-radius': 6, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+            layer({ id: 'tb-search-point', type: 'circle', source: 'tb-search-point', paint: { 'circle-color': '#1d6fd6', 'circle-radius': 7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
             layer({ id: 'tb-road-end-labels', type: 'symbol', source: 'tb-road-ends', layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-allow-overlap': true }, paint: { 'text-color': '#244666', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 } });
             const markLayers = ['tb-road-ends', 'tb-road-end-labels', 'tb-selected-label', 'tb-selected-marker', 'tb-region-labels', 'tb-names', 'tb-name-points', 'tb-address-labels', 'tb-admin-labels'];
             const areaLayers = ['tb-buildings', 'tb-street-lines', 'tb-road-lines', 'tb-place-fill', 'tb-place-lines', 'tb-region-lines', 'tb-settlement-lines', 'tb-municipal-lines'];
