@@ -341,13 +341,19 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         searchRoot = document.createElement('div');searchRoot.className = 'tb-search';
         const input = document.createElement('input');input.type = 'search';input.placeholder = tr('search');input.setAttribute('aria-label', tr('search'));
         const results = document.createElement('div');results.className = 'tb-search-results';results.hidden = true;searchRoot.append(input, results);map.getContainer().append(searchRoot);
-        let request = 0, timer;
-        cancelSearch = () => { ++request; clearTimeout(timer); results.hidden = true; results.replaceChildren(); input.value = ''; };
+        // listed: the request whose results are in the list; openFirst: Enter came before them.
+        let request = 0, timer, listed = 0, openFirst = false;
+        cancelSearch = () => { ++request; clearTimeout(timer); openFirst = false; results.hidden = true; results.replaceChildren(); input.value = ''; };
         // The search data is fetched once someone starts to search, not with the map: from the
         // focus rather than the first letters, which then wait less. (A failed fetch is tried again.)
-        input.addEventListener('focus', () => repository.loadSearch().catch(() => {}));
-        input.addEventListener('input', () => { clearTimeout(timer);const mine = ++request, generation = repository.generation;timer = setTimeout(async () => {
-            const query = normalize(input.value.trim());if (!query) { results.hidden = true;return; }
+        // The results close when the map is clicked elsewhere, and open again with the box.
+        input.addEventListener('focus', () => {
+            repository.loadSearch().catch(() => {});
+            if (input.value?.trim() && results.childElementCount) results.hidden = false;
+        });
+        map.getContainer().addEventListener('pointerdown', e => { if (!searchRoot.contains(e.target)) results.hidden = true; });
+        input.addEventListener('input', () => { clearTimeout(timer);openFirst = false;const mine = ++request, generation = repository.generation;timer = setTimeout(async () => {
+            const query = normalize(input.value.trim());if (!query) { listed = mine;openFirst = false;results.hidden = true;return; }
             results.hidden = false;results.textContent = tr('searchLoading');
             try {
                 await repository.loadSearch();if (mine !== request || generation !== repository.generation) return;
@@ -379,9 +385,22 @@ export function createResolvedMap(selection, businessesIn = () => []) {
                     const button = document.createElement('button');button.type = 'button';button.textContent = `${featureTitle(f)} · ${kindName(f)}${context ? ` · ${context}` : ''}${alias}`;
                     button.addEventListener('click', () => { selection.select('feature', f.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);
                 }
+                listed = mine;
+                if (openFirst) { openFirst = false; results.querySelector('button')?.click(); }
             } catch (e) { if (mine === request && generation === repository.generation) { results.textContent = tr('searchError');console.error(e); } }
         }, 150); });
-        input.addEventListener('keydown', e => { if (e.key === 'Escape') { ++request;results.hidden = true;input.blur(); } });
+        // The keyboard: Enter opens the first result (once they are there, if it came before them),
+        // the arrows go through them and back up to the box, Escape closes them.
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { ++request;openFirst = false;results.hidden = true;input.blur(); }
+            else if (e.key === 'Enter') { if (listed === request) results.querySelector('button')?.click(); else openFirst = true; }
+            else if (e.key === 'ArrowDown' && !results.hidden) { e.preventDefault(); results.querySelector('button')?.focus(); }
+        });
+        results.addEventListener('keydown', e => {
+            const buttons = [...results.querySelectorAll('button')], at = buttons.indexOf(document.activeElement);
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (buttons[at + (e.key === 'ArrowDown' ? 1 : -1)] || (e.key === 'ArrowUp' ? input : buttons[at]))?.focus(); }
+            else if (e.key === 'Escape') { results.hidden = true; input.focus(); }
+        });
     }
     return {
         add(mapInstance, context) {
