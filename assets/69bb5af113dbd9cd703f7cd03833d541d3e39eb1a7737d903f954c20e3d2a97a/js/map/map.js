@@ -129,7 +129,8 @@ export function initMap() {
         const regions = () => createRegions(repository.mapDocument);
         // porabje: its bounding box; porabjeOutline: its outline; stateBorder: Slovenia's border.
         const ctx = { beforeId: labelsStartId(map), data, porabje: regions().box, porabjeOutline: regions().area?.boundary || null, stateBorder: regions().border };
-        const selection = createSelection(map, createSelectionPanel(document.getElementById('selection-panel')));
+        const panel = createSelectionPanel(document.getElementById('selection-panel'));
+        const selection = createSelection(map, panel);
         const features = [createAerial(), createBasemap()];
         let resolved = null;
         const background = createBackground(selection, id => resolved?.label(id));
@@ -174,6 +175,9 @@ export function initMap() {
         if (!window.tbmapEditorOptions && data) {
             const linked = selectedInAddress();
             window.addEventListener('tbmap:selection', e => writeSelected(e.detail?.kind === 'feature' ? e.detail.id : null));
+            panel.setLinkable(() => selection.current?.kind === 'feature');
+            // The browser tab and its history say what is selected.
+            window.addEventListener('tbmap:selection', e => { document.title = e.detail?.title ? `${e.detail.title} · ${t('site.title')}` : t('site.title'); });
             if (linked) selection.select('feature', linked, { zoom: firstVisit }).then(found => { if (!found) writeSelected(null); });
         }
         map.on('resize', lock);

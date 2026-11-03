@@ -130,6 +130,8 @@ export default {
         selectObcina: 'Municipality {name}',
         selectNaselje: 'Settlement {name}',
         zoomTo: 'Zoom to',
+        copyLink: 'Copy link',
+        linkCopied: 'Link copied',
         close: 'Close',
     },
     house: {
