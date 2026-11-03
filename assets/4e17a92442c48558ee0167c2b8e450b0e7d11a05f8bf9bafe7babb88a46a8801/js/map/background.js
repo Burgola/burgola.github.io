@@ -3,7 +3,8 @@
 // the region and their house numbers.
 //
 // They make room for ours: businesses and road names are placed after our
-// names, and a business whose name does not fit keeps its icon. Over the
+// names, a business's name goes on whichever side of its icon is free, and one
+// whose name fits on no side keeps its icon. Over the
 // aerial photo they are written as ours are. Each of them can be clicked: its
 // card says what it is, its names, and the building and village of ours it is
 // in; a street name that is one of our streets opens our street. A building of
@@ -22,10 +23,23 @@ const AFTER_OURS = ['poi', 'transportation_name', 'aerodrome_label'];
 const LANGUAGES = ['sl', 'hu', 'de', 'hr', 'en'];
 const NEAR = 6;        // px: a click this close to a label is on it
 const IN_HOUSE = 20;   // m: a business this close to a building drawn as a point is in it
-const ALONG = 2000;    // m: how far from the click a road is drawn as the one clicked
+// Two pieces of a road meet when one ends this close to the other: tiles cut a road into pieces,
+// and from afar they leave out short ones (a bridge, say) between them.
+const JOIN = { px: 12, m: 30 };
 const AERIAL = { 'text-color': '#ffffff', 'text-halo-color': '#202020', 'text-halo-width': 1.2 };
 const UNSET = { 'text-color': '#000000', 'text-halo-color': 'rgba(0, 0, 0, 0)', 'text-halo-width': 0 }; // MapLibre's own
 const SELECTED = '#f35b40';
+const SIDES = { top: [0, 1], bottom: [0, -1], left: [1, 0], right: [-1, 0] };
+
+// A business's name goes where the style puts it, or else on another side of its icon: around our
+// house numbers, which are placed first, instead of hidden whenever one of them comes near as the
+// map zooms or moves.
+function sides(layout) {
+    const own = layout['text-anchor'], [x, y] = layout['text-offset'] || [0, 0];
+    const gap = Math.max(0.6, Math.hypot(x, y));
+    const order = own in SIDES ? [own, ...Object.keys(SIDES).filter(side => side !== own)] : Object.keys(SIDES);
+    return order.flatMap(side => [side, side === own ? [x, y] : SIDES[side].map(n => Math.round(n * (SIDES[side][0] ? gap + 0.3 : gap) * 100) / 100)]);
+}
 
 const empty = () => ({ type: 'FeatureCollection', features: [] });
 const collection = features => ({ type: 'FeatureCollection', features });
@@ -131,12 +145,28 @@ export function createBackground(selection, ourLabel = () => null) {
         const wanted = [e.local, ...Object.values(e.names)].map(normalize).filter(Boolean);
         return streets.find(s => inBounds(s.f.bounds, e.position, 0.01) && wanted.some(name => s.names.has(name)))?.f || null;
     }
-    // The road or river a label is on, near where it was clicked.
+    // The road or river a label is on, as far as the tiles on screen have it: the pieces of that
+    // name (or road number) met from the one clicked on, or from those drawn before the view
+    // moved. A road of the same name that never meets it, in another village, is another road.
     function lineOf(e) {
         const filter = e.shield ? ['==', ['get', 'ref'], e.ref] : ['==', ['get', 'name'], e.local];
         let found = [];
         try { found = map.querySourceFeatures(SOURCE, { sourceLayer: e.sourceLayer, filter }) || []; } catch { /* the style may lack the layer */ }
-        return found.map(f => f.geometry).filter(g => { const at = nearestOn(g, e.position); return at && metres(at, e.position) < ALONG; });
+        const pieces = found.flatMap(f => lines(f.geometry)).filter(piece => piece.length > 1);
+        const join = Math.max(JOIN.m, JOIN.px * 40075016.686 * Math.cos(e.position[1] * Math.PI / 180) / (512 * 2 ** map.getZoom()));
+        const away = (p, piece) => { const at = nearestOn({ type: 'LineString', coordinates: piece }, p); return at ? metres(at, p) : Infinity; };
+        const meet = (a, b) => [a[0], a.at(-1)].some(p => away(p, b) <= join) || [b[0], b.at(-1)].some(p => away(p, a) <= join);
+        const kept = [], rest = [], before = (e.lines || []).flatMap(lines);
+        for (const piece of pieces) (away(e.position, piece) <= join || before.some(old => meet(piece, old)) ? kept : rest).push(piece);
+        for (const queue = [...kept]; queue.length;) {
+            const from = queue.pop();
+            for (let i = rest.length - 1; i >= 0; --i) if (meet(rest[i], from)) { kept.push(rest[i]); queue.push(rest[i]); rest.splice(i, 1); }
+        }
+        return kept.length ? kept.map(coordinates => ({ type: 'LineString', coordinates })) : e.lines || [];
+    }
+    function draw(e) {
+        const shapes = !e ? [] : e.line && e.lines.length ? e.lines.map(g => geo(g)) : [geo({ type: 'Point', coordinates: e.position })];
+        map.getSource('tb-background-selected')?.setData(collection(shapes));
     }
 
     function hit(p) {
@@ -171,8 +201,17 @@ export function createBackground(selection, ourLabel = () => null) {
     function highlight(e) {
         selected = e;
         if (e?.line) e.lines = lineOf(e);
-        const shapes = !e ? [] : e.line && e.lines.length ? e.lines.map(g => geo(g)) : [geo({ type: 'Point', coordinates: e.position })];
-        map.getSource('tb-background-selected')?.setData(collection(shapes));
+        draw(e);
+    }
+    // Once the map has settled after a move, a selected road is drawn again from the tiles now on
+    // screen: on along it, and in their detail. (Drawing it settles the map again, unchanged.)
+    const shapeOf = list => JSON.stringify(list.map(g => [g.coordinates.length, g.coordinates[0], g.coordinates.at(-1)]));
+    function follow() {
+        if (!selected?.line) return;
+        const now = lineOf(selected);
+        if (shapeOf(now) === shapeOf(selected.lines)) return;
+        selected.lines = now;
+        draw(selected);
     }
 
     function bounds(e) {
@@ -189,14 +228,19 @@ export function createBackground(selection, ourLabel = () => null) {
             for (const l of style) {
                 if (!AFTER_OURS.includes(l['source-layer'])) continue;
                 if (map.getLayer('tb-names')) map.moveLayer(l.id, 'tb-names');
-                if (l['source-layer'] === 'poi' && l.layout['icon-image']) map.setLayoutProperty(l.id, 'text-optional', true);
+                if (l['source-layer'] === 'poi' && l.layout['icon-image']) {
+                    map.setLayoutProperty(l.id, 'text-variable-anchor-offset', sides(l.layout));
+                    map.setLayoutProperty(l.id, 'text-justify', 'auto');
+                    map.setLayoutProperty(l.id, 'text-optional', true);
+                }
                 // A road number is written on its shield, not on the photo.
                 if (!l.layout['icon-image'] || l['source-layer'] === 'poi')
                     written.push({ id: l.id, original: Object.fromEntries(Object.keys(AERIAL).map(key => [key, l.paint?.[key] ?? UNSET[key]])) });
             }
             map.addSource('tb-background-selected', { type: 'geojson', data: empty() });
+            map.on('idle', follow);
             const under = ['tb-selected-line'].find(id => map.getLayer(id));
-            map.addLayer({ id: 'tb-background-line', type: 'line', source: 'tb-background-selected', filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': SELECTED, 'line-width': 5, 'line-opacity': 0.55 } }, under);
+            map.addLayer({ id: 'tb-background-line', type: 'line', source: 'tb-background-selected', filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': SELECTED, 'line-width': 4 } }, under);
             map.addLayer({ id: 'tb-background-ring', type: 'circle', source: 'tb-background-selected', filter: ['in', ['geometry-type'], ['literal', ['Point', 'MultiPoint']]], paint: { 'circle-radius': 12, 'circle-opacity': 0, 'circle-stroke-color': SELECTED, 'circle-stroke-width': 2.5 } });
             selection.register('osm', {
                 priority: 0, hit, picked: false,
