@@ -191,6 +191,8 @@ export function createResolvedMap(selection, businessesIn = () => []) {
         // A house shows its building's figures too.
         const building = f.building ? f : buildingOf(f), b = building?.building;
         if (b) details.push({ label: tr('cadastral'), value: `${b.cadastralCode} ${b.cadastralName}`.trim() }, { label: tr('buildingNumber'), value: b.number }, { label: tr('year'), value: b.year }, { label: tr('floors'), value: b.floors }, { label: tr('dwellings'), value: b.dwellings }, { label: tr('businesses'), value: b.businessPremises });
+        // Where it is, as the search box takes it; an area's point is only where its name goes.
+        if (f.position && !(f.kind <= 2 || f.kind === REGION || f.kind >= 6 && isArea(f))) details.push({ label: tr('coordinates'), value: `${f.position[1].toFixed(5)}, ${f.position[0].toFixed(5)}` });
         details.push({ label: tr('existence'), value: tr(['unknown', 'current', 'historic'][f.existence]) }, { label: tr('locationScope'), value: status(f.locationReview) });
         const sections = [{ title: getLanguage() === 'sl' ? 'Podrobnosti' : 'Details', rows: details, fold: 'details' }];
         if (f.oldNumbers.length) sections.push({ title: tr('oldNumbers'), rows: f.oldNumbers.map(n => ({ label: n.period || tr('unknown'), value: `${n.number}${n.settlement ? `, ${n.settlement}` : ''}` })) });

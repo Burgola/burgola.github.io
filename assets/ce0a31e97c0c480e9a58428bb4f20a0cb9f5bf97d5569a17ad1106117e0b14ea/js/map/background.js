@@ -277,12 +277,15 @@ export function createBackground(selection, ourLabel = () => null) {
                 const at = points(poi.geometry)[0];
                 if (!at || (outline ? !contains(outline, at) : metres(f.position, at) > IN_HOUSE)) continue;
                 const e = entityOf(poi, 'poi', null, null);
-                if (!e || seen.has(e.id)) continue;
-                seen.add(e.id);
-                const text = titleOf(remember(e)), kind = kindOf(e);
-                rows.push({ label: t('background.here'), value: text === kind ? kind : `${text} · ${kind}`, select: { kind: 'osm', id: e.id } });
+                if (!e) continue;
+                // The same business mapped twice (as a point and as an area, say) is listed once.
+                const text = titleOf(e), kind = kindOf(e), value = text === kind ? kind : `${text} · ${kind}`;
+                if (seen.has(e.id) || seen.has(value)) continue;
+                seen.add(e.id).add(value);
+                remember(e);
+                rows.push({ label: t('background.here'), value, select: { kind: 'osm', id: e.id } });
             }
-            return rows;
+            return rows.sort((a, b) => a.value.localeCompare(b.value));
         },
     };
 }
