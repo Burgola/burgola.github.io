@@ -24,7 +24,7 @@ export default {
         useTitle: 'Kako uporabljati zemljevid',
         tips: {
             click: 'Kliknite katero koli ime, hišo, vas ali podjetje na zemljevidu, da vidite, kaj je; njegova kartica vodi naprej do krajev okoli njega.',
-            search: 'Iščite imena, hišna imena, naslove ali koordinate (46.66, 16.16). S tipko / začnete pisati.',
+            search: 'Iščite imena, hišna imena, naslove ali koordinate (46.66, 16.16). Na tipkovnici s tipko / začnete iskati.',
             link: 'Naslov strani pove, kateri kraj ste izbrali: Kopiraj povezavo na njegovi kartici ga kopira, da ga delite.',
             settings: 'Gumb z nastavitvami pod gumboma za povečavo izbere, kaj zemljevid kaže in kako veliko je besedilo.',
             location: 'Na telefonu gumb za lokacijo pokaže, kje ste.',
@@ -148,6 +148,7 @@ export default {
         selectNaselje: 'Naselje {name}',
         zoomTo: 'Približaj',
         copyLink: 'Kopiraj povezavo',
+        resize: 'Pokaži več ali manj',
         linkCopied: 'Povezava kopirana',
         close: 'Zapri',
     },

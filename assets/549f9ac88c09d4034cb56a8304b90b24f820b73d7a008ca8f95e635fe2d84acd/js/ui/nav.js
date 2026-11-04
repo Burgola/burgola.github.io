@@ -38,6 +38,13 @@ export function initNav() {
     }
 
     toggle.addEventListener('click', () => setMenuOpen(!nav.classList.contains('open')));
+    // The phone menu closes with a tap anywhere else, or Escape.
+    document.addEventListener('pointerdown', (e) => {
+        if (nav.classList.contains('open') && !nav.contains(e.target) && !toggle.contains(e.target)) setMenuOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && nav.classList.contains('open')) { setMenuOpen(false); toggle.focus(); }
+    });
     window.addEventListener('hashchange', () => showView(currentView()));
     onLanguageChange(() => setMenuOpen(nav.classList.contains('open')));
     showView(currentView());

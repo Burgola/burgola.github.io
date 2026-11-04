@@ -14,6 +14,8 @@
 //       describe(entity),    -> panel view (see panel.js), in the current language
 //       highlight(entity),   draw it as selected; called with null to undo
 //       bounds(entity),      -> [[w, s], [e, n]] for "Zoom to"
+//       point(entity),       optional -> [lng, lat] where it is seen on the map
+//                            (its label): kept in sight above a phone's card
 //       picked: false,       optional: the editor's picking (setPicking) passes
 //                            over it (the base map's own labels)
 //       editInfo(entity),    optional, for the editor client: { gov, related }
@@ -65,7 +67,10 @@ export function createSelection(map, panel) {
         const def = kinds.get(current.kind);
         const bounds = def.bounds?.(current.entity);
         // A short flight: MapLibre's own pace takes seconds between a village and its municipality.
-        if (bounds) map.fitBounds(bounds, { padding: 60, maxZoom: def.maxZoom ?? 17, duration: 700 });
+        // On a phone it fits above the card, and below the search box.
+        const sheet = panel.sheetHeight();
+        const padding = sheet ? { top: 70, left: 20, right: 60, bottom: sheet + 16 } : 60;
+        if (bounds) map.fitBounds(bounds, { padding, maxZoom: def.maxZoom ?? 17, duration: 700 });
     }
 
     // quiet: if the thing is not loaded (a house far away), just deselect
@@ -111,15 +116,19 @@ export function createSelection(map, panel) {
     }
 
     // On phones the panel is a sheet over the bottom of the map; if the
-    // selected thing ended up under it, slide the map up to show it.
+    // selected thing ended up under it, slide the map up to show it: where it
+    // is seen (its label), else the middle of its bounds.
     function revealAboveSheet(def, entity) {
         const sheet = panel.sheetHeight();
-        if (!sheet || !def.bounds) return;
-        const bounds = def.bounds(entity);
-        if (!bounds) return;
-        const [[w, s], [e, n]] = bounds;
-        const center = [(w + e) / 2, (s + n) / 2];
-        const visibleBottom = map.getContainer().clientHeight - sheet - 16;
+        if (!sheet) return;
+        let center = def.point?.(entity);
+        if (!center) {
+            const bounds = def.bounds?.(entity);
+            if (!bounds) return;
+            const [[w, s], [e, n]] = bounds;
+            center = [(w + e) / 2, (s + n) / 2];
+        }
+        const visibleBottom = map.getContainer().clientHeight - sheet - 24;
         if (map.project(center).y > visibleBottom) {
             map.easeTo({ center, offset: [0, -sheet / 2], duration: 400 });
         }

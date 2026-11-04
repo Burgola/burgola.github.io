@@ -23,8 +23,8 @@ export default {
         body: 'Burgola Prekmurje Map is an interactive map of Prekmurje: its municipalities, villages, houses and the local names of its hills, fields and farms. More is coming soon.',
         useTitle: 'Using the map',
         tips: {
-            click: 'Click any name, house, village or business on the map to see what it is; its card leads on to the places around it.',
-            search: 'Search for names, house names, addresses or coordinates (46.66, 16.16). Press / to start typing.',
+            click: 'Click or tap any name, house, village or business on the map to see what it is; its card leads on to the places around it.',
+            search: 'Search for names, house names, addresses or coordinates (46.66, 16.16). On a keyboard, / starts the search.',
             link: 'The page address names the place you selected: Copy link on its card copies it to share.',
             settings: 'The settings button under the zoom buttons chooses what the map shows and how large its text is.',
             location: 'On a phone, the location button shows where you are.',
@@ -142,6 +142,8 @@ export default {
         selectNaselje: 'Settlement {name}',
         zoomTo: 'Zoom to',
         copyLink: 'Copy link',
+        // the handle of the card at the bottom of a phone's screen
+        resize: 'Show more or less',
         linkCopied: 'Link copied',
         close: 'Close',
     },

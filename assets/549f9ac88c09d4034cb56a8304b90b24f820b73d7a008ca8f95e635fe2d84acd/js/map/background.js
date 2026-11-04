@@ -21,7 +21,7 @@ const SOURCE = 'openmaptiles';
 const AFTER_OURS = ['poi', 'transportation_name', 'aerodrome_label'];
 // The names a card shows besides the one in the visitor's language.
 const LANGUAGES = ['sl', 'hu', 'de', 'hr', 'en'];
-const NEAR = 6;        // px: a click this close to a label is on it
+const NEAR = globalThis.matchMedia?.('(hover: none), (pointer: coarse)').matches ? 14 : 6; // px: a click (a finger's less exact) this close to a label is on it
 const IN_HOUSE = 20;   // m: a business this close to a building drawn as a point is in it
 // Two pieces of a road meet when one ends this close to the other: tiles cut a road into pieces,
 // and from afar they leave out short ones (a bridge, say) between them.
@@ -199,7 +199,8 @@ export function createBackground(selection, ourLabel = () => null) {
         // Its own details (opening hours, a website, ...) are on OpenStreetMap, not in the tiles.
         const [lng, lat] = e.position.map(n => n.toFixed(6));
         const actions = [{ label: t('background.openOsm'), href: `https://www.openstreetmap.org/query?lat=${lat}&lon=${lng}#map=19/${lat}/${lng}` }];
-        return { kind: kindOf(e), title: text, rows, actions, background: true };
+        // A nameless one is called what it is: the line over it then says where it is from.
+        return { kind: text === kindOf(e) ? 'OpenStreetMap' : kindOf(e), title: text, rows, actions, background: true };
     }
 
     function highlight(e) {
@@ -263,7 +264,7 @@ export function createBackground(selection, ourLabel = () => null) {
             map.addLayer({ id: 'tb-background-line', type: 'line', source: 'tb-background-selected', filter: ['in', ['geometry-type'], ['literal', ['LineString', 'MultiLineString']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': SELECTED, 'line-width': 4 } }, under);
             map.addLayer({ id: 'tb-background-ring', type: 'circle', source: 'tb-background-selected', filter: ['in', ['geometry-type'], ['literal', ['Point', 'MultiPoint']]], paint: { 'circle-radius': 12, 'circle-opacity': 0, 'circle-stroke-color': SELECTED, 'circle-stroke-width': 2.5 } });
             selection.register('osm', {
-                priority: 0, hit, picked: false,
+                priority: 0, hit, picked: false, point: e => e.position,
                 get: id => known.get(id) || (selected?.id === id ? selected : null),
                 describe, highlight, bounds, maxZoom: 18,
             });

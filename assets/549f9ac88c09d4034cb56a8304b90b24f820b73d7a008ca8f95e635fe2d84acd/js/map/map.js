@@ -68,6 +68,10 @@ function addCredits(map) {
                 + ` · ${t('credits.mapping')}: Tim Bunderla`,
         });
         map.addControl(control, 'bottom-right');
+        // On a narrow screen MapLibre folds them into an (i) button, but opens it at first, over a
+        // quarter of a phone's map: they start folded.
+        const box = map.getContainer().querySelector('.maplibregl-ctrl-attrib.maplibregl-compact');
+        if (box) { box.classList.remove('maplibregl-compact-show'); box.removeAttribute('open'); }
     };
     render();
     onLanguageChange(render);
@@ -105,7 +109,11 @@ export function initMap() {
     });
 
     addCredits(map);
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+    // Two fingers zoom a phone's map; turning or tilting it by accident is too easy there, so they
+    // do not, and there is no compass to turn it back.
+    const fingers = matchMedia('(hover: none), (pointer: coarse)').matches;
+    if (fingers) { map.touchZoomRotate.disableRotation(); map.touchPitch.disable(); }
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true, showCompass: !fingers }), 'top-right');
     // On the website the whole map view can fill the screen, its search and card with it.
     if (!window.tbmapEditorOptions) map.addControl(new maplibregl.FullscreenControl({ container: document.getElementById('view-map') }), 'top-right');
     // And it can show where the visitor is (the browser asks first): which house or field one
