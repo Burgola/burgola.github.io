@@ -126,6 +126,7 @@ export default {
     credits: {
         site: 'Spletna stran in orodja',
         mapping: 'Kartiranje in vzdrževanje',
+        contact: 'Kontakt',
     },
     map: {
         basemap: {
