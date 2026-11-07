@@ -26,7 +26,11 @@ export const VIEW_DEFAULTS = {
     places: true,         // our own places (data/mapper/place.json)
     pois: true,           // the base map's businesses and other points of interest (background.js)
     roadNames: true,      // and its road and street names
-    progress: false,      // settlements shaded by how much is checked (progress.js)
+    progress: false,      // settlements shaded by how much is checked (progress-colors.js)
+    progressStages: false, // in three stages instead of a gradient
+    progressVibrant: true, // in vibrant colours instead of muted ones
+    progressRed: 10,      // the stages, in percent: red under this,
+    progressGreen: 80,    // yellow up to this, green from it to 100
     namesZoom: 0,         // zoom levels later (+) or earlier (-) local names appear
     textScale: 1,         // every label on the map (text-size.js)
     namesScale: 1,        // and on top of that our names: local, house, places

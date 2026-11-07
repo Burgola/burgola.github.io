@@ -4,6 +4,7 @@
 
 import { t, onLanguageChange } from '../i18n/i18n.js';
 import { getView, setView, resetView, onViewChange, NAMES_ZOOM_STEPS, TEXT_SCALE_STEPS } from './view-settings.js';
+import { progressThresholds } from './progress-colors.js';
 
 // Sliders: a view setting moved through a list of steps.
 const SLIDERS = {
@@ -76,6 +77,7 @@ export class ViewControl {
         this.button.setAttribute('aria-label', t('view.open'));
         this.inputs = {};
         this.ranges = {};
+        this.numbers = {};
 
         const head = el('div', 'view-menu-head');
         const reset = el('button', 'view-menu-reset', t('view.reset'));
@@ -88,17 +90,58 @@ export class ViewControl {
             parts.push(el('div', 'view-menu-section', t(section.title)));
             for (const key of section.sliders || []) parts.push(this.slider(key));
             for (const key of section.rows) {
-                const row = el('label', 'view-menu-row');
-                const input = el('input');
-                input.type = 'checkbox';
-                input.addEventListener('change', () => setView({ [key]: input.checked }));
-                row.append(input, el('span', 'view-switch'), el('span', 'view-menu-label', t(`view.${key}`)));
-                parts.push(row);
-                this.inputs[key] = input;
+                parts.push(this.row(key));
+                if (key === 'progress') parts.push(this.progressOptions());
             }
         }
         this.menu.replaceChildren(...parts);
         this.sync();
+    }
+
+    // A setting switched on and off.
+    row(key) {
+        const row = el('label', 'view-menu-row');
+        const input = el('input');
+        input.type = 'checkbox';
+        input.addEventListener('change', () => setView({ [key]: input.checked }));
+        row.append(input, el('span', 'view-switch'), el('span', 'view-menu-label', t(`view.${key}`)));
+        this.inputs[key] = input;
+        return row;
+    }
+
+    // Under the progress switch, folded: gradient or stages, muted or vibrant, and where the
+    // stages change. The thresholds stay in view when not by stage, disabled, saying why.
+    progressOptions() {
+        const more = el('details', 'view-menu-more');
+        more.open = Boolean(this.progressOpen);
+        more.addEventListener('toggle', () => { this.progressOpen = more.open; });
+        more.append(el('summary', null, t('view.progressOptions')), this.row('progressStages'), this.row('progressVibrant'));
+        const thresholds = el('div', 'view-menu-thresholds');
+        for (const key of ['progressRed', 'progressGreen']) {
+            const label = el('label', 'view-menu-number');
+            const input = el('input');
+            input.type = 'number';
+            input.min = '0';
+            input.max = '100';
+            input.step = '1';
+            input.inputMode = 'numeric';
+            // Kept in order (red under green); what can't be kept shows the value used instead.
+            input.addEventListener('change', () => {
+                const value = Number(input.value);
+                if (input.value === '' || !Number.isFinite(value)) { this.sync(); return; }
+                const next = { ...getView(), [key]: value };
+                if (key === 'progressRed' && next.progressGreen <= value) next.progressGreen = Math.min(100, Math.round(value) + 1);
+                const { red, green } = progressThresholds(next);
+                setView({ progressRed: red, progressGreen: green });
+                this.sync();
+            });
+            label.append(el('span', null, t(`view.${key}`)), input, el('span', null, '%'));
+            thresholds.append(label);
+            this.numbers[key] = input;
+        }
+        this.thresholdNote = el('div', 'view-menu-note');
+        more.append(thresholds, this.thresholdNote);
+        return more;
     }
 
     // e.g. "Names appear: earlier ... later", "All text: smaller ... larger"
@@ -125,5 +168,10 @@ export class ViewControl {
         const view = getView();
         for (const [key, input] of Object.entries(this.inputs)) input.checked = view[key];
         for (const [key, range] of Object.entries(this.ranges)) range.value = String(stepOf(SLIDERS[key].steps, view[key]));
+        const thresholds = progressThresholds(view);
+        this.numbers.progressRed.value = String(thresholds.red);
+        this.numbers.progressGreen.value = String(thresholds.green);
+        for (const input of Object.values(this.numbers)) input.disabled = !view.progressStages;
+        this.thresholdNote.textContent = view.progressStages ? t('view.progressYellow') : t('view.progressStagesOff');
     }
 }

@@ -78,13 +78,23 @@ export default {
         roadNames: 'Imena cest in ulic',
         mapping: 'Kartiranje',
         progress: 'Napredek vasi (zeleno / rumeno / rdeče)',
+        progressOptions: 'Barve napredka',
+        progressStages: 'Po stopnjah (tri barve, ne prelivanje)',
+        progressVibrant: 'Žive barve',
+        progressRed: 'Rdeče pod',
+        progressGreen: 'Zeleno od',
+        progressYellow: 'Vmes rumeno.',
+        progressStagesOff: 'Velja le, ko je vklopljeno »Po stopnjah«.',
     },
-    // Senčenje napredka vasi in njegova legenda (map/progress.js)
+    // Senčenje napredka vasi in njegova legenda (map/progress-colors.js)
     progress: {
         title: 'Napredek vasi',
         none: 'nezačeto',
         half: 'polovica',
         all: 'končano',
+        under: 'pod {to} %',
+        between: '{from}–{to} %',
+        from: '{from}–100 %',
         what: 'Delež hiš v vasi, ki imajo vsa imena preverjena ali je potrjeno, da hišnega imena nimajo.',
         loading: 'Nalaganje …',
     },
@@ -116,6 +126,7 @@ export default {
     credits: {
         site: 'Spletna stran in orodja',
         mapping: 'Kartiranje in vzdrževanje',
+        contact: 'Kontakt',
     },
     map: {
         basemap: {

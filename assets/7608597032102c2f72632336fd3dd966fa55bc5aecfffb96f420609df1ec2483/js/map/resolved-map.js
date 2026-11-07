@@ -3,6 +3,7 @@ import { LocalSiteCategory } from '../data/DatDecoder.js';
 import { getLanguage, t } from '../i18n/i18n.js';
 import { createRegions, contains, isMapRegion, REGION } from './regions.js';
 import { CONFIG } from '../config.js';
+import { progressStyle } from './progress-colors.js';
 
 const empty = () => ({ type: 'FeatureCollection', features: [] });
 const collection = features => ({ type: 'FeatureCollection', features });
@@ -162,9 +163,11 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         if (!progressLegend) return;
         progressLegend.replaceChildren();
         const heading = document.createElement('div'); heading.className = 'progress-legend-title'; heading.textContent = t('progress.title');
-        const bar = document.createElement('div'); bar.className = 'progress-legend-bar'; bar.style.background = 'linear-gradient(to right,#d93025,#f2b705,#1e8e3e)';
+        const style = progressStyle(view);
+        const bar = document.createElement('div'); bar.className = 'progress-legend-bar'; bar.style.background = style.legend;
         const ends = document.createElement('div'); ends.className = 'progress-legend-ends';
-        for (const key of ['progress.none', 'progress.half', 'progress.all']) { const span = document.createElement('span'); span.textContent = t(key); ends.append(span); }
+        const ranges = style.stages ? [t('progress.under', { to: style.red }), t('progress.between', { from: style.red, to: style.green }), t('progress.from', { from: style.green })] : [t('progress.none'), t('progress.half'), t('progress.all')];
+        for (const text of ranges) { const span = document.createElement('span'); span.textContent = text; ends.append(span); }
         const note = document.createElement('div'); note.className = 'progress-legend-note'; note.textContent = t('progress.what');
         progressLegend.append(heading, bar, ends, note);
     }
@@ -410,6 +413,11 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         for (const id of ['tb-state-band', 'tb-state-line']) map.setLayoutProperty(id, 'visibility', view.drzava === false ? 'none' : 'visible');
         for (const id of ['tb-progress-fill', 'tb-progress-labels']) map.setLayoutProperty(id, 'visibility', view.progress ? 'visible' : 'none');
         if (progressLegend) progressLegend.hidden = !view.progress;
+        const progress = progressStyle(view);
+        map.setPaintProperty('tb-progress-fill', 'fill-color', progress.color);
+        map.setPaintProperty('tb-progress-fill', 'fill-opacity', progress.palette.opacity);
+        map.setPaintProperty('tb-progress-labels', 'text-halo-color', progress.color);
+        map.setPaintProperty('tb-progress-labels', 'text-color', progress.text);
         const placeFilter = ['all', ['>=', ['get', 'kind'], 6], ['<', ['get', 'kind'], REGION], ['!=', ['get', 'category'], 'road']];
         if (view.places === false) placeFilter.push(['!=', ['get', 'local'], true]);
         for (const key of ['region', 'hamlet', 'relief', 'water', 'field', 'building']) if (view[key] === false) placeFilter.push(['!=', ['get', 'category'], key]);
@@ -547,7 +555,8 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             for (const id of ['tb-outlines', 'tb-shapes', 'tb-labels', 'tb-addresses', 'tb-selected-shape', 'tb-selected-point', 'tb-road-ends', 'tb-mask', 'tb-progress', 'tb-progress-labels', 'tb-state-border', 'tb-search-point']) map.addSource(id, { type: 'geojson', data: empty(), ...(LABEL_SOURCES.includes(id) || id === 'tb-shapes' ? { promoteId: 'id' } : {}) });
             setMask();
             layer({ id: 'tb-region-mask', type: 'fill', source: 'tb-mask', paint: { 'fill-color': '#15171c', 'fill-opacity': 0.4 } });
-            const progressColor = ['interpolate', ['linear'], ['get', 'p'], 0, '#d93025', 0.5, '#f2b705', 1, '#1e8e3e'];
+            // Coloured from the settings in applyVisibility (progress-colors.js).
+            const progressColor = progressStyle(view).color;
             layer({ id: 'tb-progress-fill', type: 'fill', source: 'tb-progress', layout: { visibility: 'none' }, paint: { 'fill-color': progressColor, 'fill-opacity': 0.24 } });
             // Places drawn as areas, from the zoom where each is big enough to matter (applyVisibility).
             layer({ id: 'tb-place-fill', type: 'fill', source: 'tb-shapes', filter: ['>=', ['get', 'kind'], 6], paint: { 'fill-color': '#ed856c', 'fill-opacity': 0.12 } });
@@ -645,7 +654,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             map.setPaintProperty('tb-region-labels', 'text-color', REGION_COLOURS[mode].text);map.setPaintProperty('tb-region-labels', 'text-halo-color', aerial ? '#202020' : '#ffffff');
         },
         setLanguage(value) { language = value;queueRender();renderProgressLegend();refreshSearch();if (loadingNote) loadingNote.textContent = tr('loadingHouses');if (searchRoot) { searchRoot.querySelector('input').placeholder = tr('search');searchRoot.querySelector('input').setAttribute('aria-label', tr('search')); } },
-        applyView(value) { view = value;queueRender();loadVisible(); },
+        applyView(value) { view = value;queueRender();loadVisible();renderProgressLegend(); },
         async refreshNames() { await repository.loadMap();queueRender(); },
         async reload(base) { cancelSearch(); selection.clear?.(); selected = null; repository.reset(base);const generation = repository.generation;try { await repository.loadMap();if (generation !== repository.generation) return;render();await loadVisible(); } catch (e) { if (generation === repository.generation) error(e); } },
         buildingOutline(id) { return feature(id)?.geometry || null; },

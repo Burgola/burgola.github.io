@@ -488,6 +488,25 @@ main {
 .view-menu-row input:checked + .view-switch::after { transform: translateX(12px); }
 .view-menu-row input:focus-visible + .view-switch { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+/* Folded options under a switch (the progress colours, view-control.js) */
+.view-menu-more { margin: 0 0 4px 40px; }
+.view-menu-more > summary { padding: 3px 0; color: var(--text-muted); font-size: 13px; cursor: pointer; }
+.view-menu-more > summary:hover, .view-menu-more[open] > summary { color: var(--text); }
+.view-menu-more .view-menu-label { font-size: 13px; }
+.view-menu-thresholds { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 4px 0 2px; }
+.view-menu-number { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.view-menu-number input {
+    width: 52px;
+    padding: 2px 4px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+}
+.view-menu-number input:disabled { opacity: .5; }
+.view-menu-note { color: var(--text-muted); font-size: 12px; }
+
 .view-menu-slider { margin: 2px 0 8px; }
 .view-menu-slider-label { font-size: 13px; margin-bottom: 2px; }
 .view-menu-slider input { width: 100%; accent-color: var(--accent); }
@@ -694,7 +713,7 @@ a.sp-action { text-decoration: none; }
 
 @media (max-width: 640px) {
     /* 16px, or an iPhone zooms the page in while one types. */
-    .tb-search { font-size: 16px; }
+    .tb-search, .view-menu-number input { font-size: 16px; }
 
     .view-menu { right: 0; top: calc(100% + 8px); width: min(290px, calc(100vw - 20px)); }
 

@@ -79,13 +79,23 @@ export default {
         roadNames: 'Road and street names',
         mapping: 'Mapping',
         progress: 'Progress of the villages (green / yellow / red)',
+        progressOptions: 'Progress colours',
+        progressStages: 'Show by stage (three colours, not a gradient)',
+        progressVibrant: 'Vibrant colours',
+        progressRed: 'Red under',
+        progressGreen: 'Green from',
+        progressYellow: 'Yellow in between.',
+        progressStagesOff: 'Only used with "Show by stage" on.',
     },
-    // The village progress shading and its legend (map/progress.js)
+    // The village progress shading and its legend (map/progress-colors.js)
     progress: {
         title: 'Progress of the villages',
         none: 'not started',
         half: 'half',
         all: 'done',
+        under: 'under {to} %',
+        between: '{from}–{to} %',
+        from: '{from}–100 %',
         what: 'Share of the village\'s houses whose names are all checked, or that are confirmed to have no house name.',
         loading: 'Loading…',
     },
@@ -109,10 +119,11 @@ export default {
             network: 'The GURS photo server cannot be reached ({detail}).',
         },
     },
-    // Who did what, each followed by a name (index.html, map credits)
+    // Who did what, each followed by a name, and the contact address (index.html, map credits)
     credits: {
         site: 'Website and tools',
         mapping: 'Mapping and upkeep',
+        contact: 'Contact',
     },
     map: {
         basemap: {
