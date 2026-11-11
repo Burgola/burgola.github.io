@@ -29,12 +29,13 @@
 //
 // A MapLibre protocol: a source whose tile URLs go through cachedUrl()
 // (aerial.js) is fetched here. Where Cache Storage is not available (plain
-// http, some private windows) only the memory part works. The native editor
-// uses the same cache in its persistent WebView profile and stable local origin.
+// http, some private windows) only the memory part works (core/file-store.js). The native
+// editor uses the same cache in its persistent WebView profile and stable local origin.
+
+import { FileStore } from '../core/file-store.js';
 
 const PROTOCOL = 'cached';
-const STORE_NAME = 'tbmap-tiles-v2';
-const OLD_STORES = ['tbmap-tiles-v1'];      // may hold white tiles from bad moments
+const STORE_VERSION = 'v2';                 // v1 may hold white tiles from bad moments
 const MAX_STORED = 2500;                    // a photo tile is ~50 KB: ~125 MB
 const MAX_MEMORY = 300;                     // ~15 MB
 const MAX_AGE = 30 * 24 * 3600 * 1000;      // the photo is renewed yearly
@@ -52,7 +53,7 @@ export const NOTHING = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAY
 
 const memory = new Map();                   // url -> ArrayBuffer, oldest first
 const clips = new Map();                    // name -> { rings in Web Mercator metres, box }
-let storeOpen = null;
+let store = null;                           // the tiles kept between visits
 let addedSinceTrim = 0;
 
 // How the tiles are doing, for the status line (aerial.js).
@@ -136,12 +137,9 @@ class TileError extends Error {
     }
 }
 
-let registered = false;
-
 export function registerTileCache() {
-    if (registered) return;
-    registered = true;
-    dropOldStores();
+    if (store) return;
+    store = new FileStore('tiles', STORE_VERSION);
     maplibregl.addProtocol(PROTOCOL, async (params, abort) => {
         const { base: url, flags, box } = parse(params.url.slice(PROTOCOL.length + 3));
         const clip = clips.get(flags.get('clip'));
@@ -149,15 +147,14 @@ export function registerTileCache() {
         if (place === 'outside') return { data: NOTHING.slice(0) };
         let data = memory.get(url);
         if (!data) {
-            const store = await openStore();
-            data = store && await fromStore(store, url);
+            data = await fromStore(url);
             if (!data) {
                 status.loading++;
                 notify();
                 try {
                     const got = await fetchTile(url, abort.signal);
                     data = got.data;
-                    if (store && data.byteLength >= BLANK_BYTES) toStore(store, url, data, got.type);
+                    if (data.byteLength >= BLANK_BYTES) toStore(url, data, got.type);
                     status.failed.delete(url);
                 } catch (err) {
                     if (!abort.signal.aborted) {
@@ -285,21 +282,7 @@ function remember(url, data) {
     if (memory.size > MAX_MEMORY) memory.delete(memory.keys().next().value);
 }
 
-function openStore() {
-    if (!storeOpen) {
-        storeOpen = typeof caches === 'undefined'
-            ? Promise.resolve(null)
-            : caches.open(STORE_NAME).catch(() => null);
-    }
-    return storeOpen;
-}
-
-function dropOldStores() {
-    if (typeof caches === 'undefined') return;
-    for (const name of OLD_STORES) caches.delete(name).catch(() => {});
-}
-
-async function fromStore(store, url) {
+async function fromStore(url) {
     try {
         const res = await store.match(url);
         if (!res) return null;
@@ -318,15 +301,11 @@ async function fromStore(store, url) {
     }
 }
 
-async function toStore(store, url, data, type) {
-    try {
-        await store.put(url, new Response(data.slice(0), { headers: { 'content-type': type, [STORED_AT]: String(Date.now()) } }));
-        if (++addedSinceTrim >= TRIM_EVERY) {
-            addedSinceTrim = 0;
-            const keys = await store.keys(); // oldest first
-            for (const key of keys.slice(0, Math.max(0, keys.length - MAX_STORED))) await store.delete(key);
-        }
-    } catch {
-        // Storage full or blocked: the tile is just not kept.
+async function toStore(url, data, type) {
+    const kept = await store.put(url, new Response(data.slice(0), { headers: { 'content-type': type, [STORED_AT]: String(Date.now()) } }));
+    if (kept && ++addedSinceTrim >= TRIM_EVERY) {
+        addedSinceTrim = 0;
+        const urls = await store.urls(); // oldest first
+        for (const old of urls.slice(0, Math.max(0, urls.length - MAX_STORED))) await store.delete(old);
     }
 }

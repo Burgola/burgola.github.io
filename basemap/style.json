@@ -1,5 +1,5 @@
 {
-    "glyphs": "fonts/{fontstack}/{range}.pbf",
+    "glyphs": "basemap://fonts/{fontstack}/{range}.pbf",
     "layers": [
         {
             "id": "background",
@@ -6047,7 +6047,7 @@
             "maxzoom": 14,
             "minzoom": 0,
             "tiles": [
-                "basemap://{z}/{x}/{y}"
+                "basemap://tiles/{z}/{x}/{y}.pbf"
             ],
             "type": "vector"
         }

@@ -1,3 +1,23 @@
+/* Inter, from our own site (vendor/inter, SIL Open Font License): one variable font file per
+   alphabet, the second (č, ő, ...) only fetched for a page that uses it. Text shows in the
+   fallback font until it is in. */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url(../vendor/inter/inter-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url(../vendor/inter/inter-latin-ext.woff2) format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
     --topbar-h: 60px;
     --bg: #f6f5f2;
@@ -388,6 +408,15 @@ main {
 .maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button { background-color: transparent; }
 @media (prefers-color-scheme: dark) {
     .maplibregl-ctrl-attrib-button { filter: invert(1); }
+    /* The map's buttons in the page's dark colours, not white; MapLibre's dark icons turned
+       light, their colours (the location's blue) kept. */
+    :root:not([data-native-editor]) .maplibregl-ctrl-group { background: var(--surface); }
+    :root:not([data-native-editor]) .maplibregl-ctrl-group button + button { border-top-color: var(--border); }
+    :root:not([data-native-editor]) .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1) hue-rotate(180deg); }
+    :root:not([data-native-editor]) .maplibregl-ctrl-group button:not(:disabled):not(.active):hover { background-color: var(--bg); }
+    :root:not([data-native-editor]) .basemap-toggle.maplibregl-ctrl-group button { color: var(--text-muted); }
+    :root:not([data-native-editor]) .basemap-toggle.maplibregl-ctrl-group button:not(.active):hover { background: var(--bg); color: var(--text); }
+    :root:not([data-native-editor]) .basemap-toggle.maplibregl-ctrl-group button.active { color: #fff; }
 }
 
 
@@ -399,7 +428,7 @@ main {
     width: 18px;
     height: 18px;
     margin: auto;
-    background: #333;
+    background: var(--text);
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 1 8l11 6 11-6-11-6zm0 2.3L18.8 8 12 11.7 5.2 8 12 4.3zM3.4 11.3 1 12.6l11 6 11-6-2.4-1.3L12 16l-8.6-4.7zm0 4.4L1 17l11 6 11-6-2.4-1.3L12 20.4l-8.6-4.7z'/%3E%3C/svg%3E") center / contain no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 1 8l11 6 11-6-11-6zm0 2.3L18.8 8 12 11.7 5.2 8 12 4.3zM3.4 11.3 1 12.6l11 6 11-6-2.4-1.3L12 16l-8.6-4.7zm0 4.4L1 17l11 6 11-6-2.4-1.3L12 20.4l-8.6-4.7z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
@@ -423,7 +452,8 @@ main {
     text-align: left;
 }
 
-.view-menu-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.view-menu-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.view-menu-actions { display: flex; gap: 6px; flex: none; }
 .view-menu-title { font-weight: 700; font-size: 15px; }
 
 .view-menu .view-menu-reset {
@@ -506,6 +536,8 @@ main {
 }
 .view-menu-number input:disabled { opacity: .5; }
 .view-menu-note { color: var(--text-muted); font-size: 12px; }
+.view-menu-row-note { margin: -2px 0 4px 40px; }
+.view-menu-row:has(input:disabled) { opacity: .5; cursor: default; }
 
 .view-menu-slider { margin: 2px 0 8px; }
 .view-menu-slider-label { font-size: 13px; margin-bottom: 2px; }
@@ -715,7 +747,37 @@ a.sp-action { text-decoration: none; }
     /* 16px, or an iPhone zooms the page in while one types. */
     .tb-search, .view-menu-number input { font-size: 16px; }
 
-    .view-menu { right: 0; top: calc(100% + 8px); width: min(290px, calc(100vw - 20px)); }
+    /* The settings are a sheet along the bottom, the width of the screen, like a place's card:
+       the map above it shows what they change. Its head stays in view while it scrolls.
+       (MapLibre moves each control by translate(0), which would hold the sheet inside the
+       button's box: not while it is open.) */
+    .view-control.maplibregl-ctrl:has(> .view-menu:not([hidden])) { transform: none; }
+    .view-menu {
+        position: fixed;
+        top: auto;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        width: auto;
+        max-height: 62dvh;
+        padding-top: 0;
+        border-radius: 14px;
+        overscroll-behavior: contain;
+    }
+    .view-menu-head {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        margin: 0 -14px 4px;
+        padding: 12px 14px 8px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+    }
+    .view-menu-title { font-size: 16px; }
+
+    /* The progress legend: wider and lower, so it takes fewer lines of the map. */
+    .progress-legend { left: 8px; bottom: 34px; width: min(330px, calc(100% - 60px)); padding: 8px 10px; }
+    .progress-legend-note { margin-top: 4px; font-size: 11.5px; }
 
     /* The card is a sheet over the bottom of the map: small at first, taller with its handle
        (panel.js), leaving the search box in view. */
@@ -760,6 +822,11 @@ a.sp-action { text-decoration: none; }
     .maplibregl-ctrl-group button { width: 40px; height: 40px; }
     .sp-actions button, .sp-actions a { padding: 10px 14px; }
     .sp-chip { padding: 6px 12px; }
+    /* The settings' rows and buttons, a finger's height. */
+    .view-menu-row { padding: 9px 0; }
+    .view-menu-more > summary { padding: 8px 0; }
+    .view-menu .view-menu-reset { padding: 8px 12px; font-size: 14px; }
+    .view-menu-number input { padding: 6px 6px; }
 }
 
 .view-page { overflow-y: auto; }

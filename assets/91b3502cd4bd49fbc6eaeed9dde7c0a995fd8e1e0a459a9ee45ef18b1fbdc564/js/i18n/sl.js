@@ -47,6 +47,7 @@ export default {
         open: 'Nastavitve zemljevida',
         title: 'Nastavitve zemljevida',
         reset: 'Ponastavi',
+        close: 'Zapri',
         borders: 'Meje',
         drzava: 'Državna meja',
         obcine: 'Občine',
@@ -85,6 +86,14 @@ export default {
         progressGreen: 'Zeleno od',
         progressYellow: 'Vmes rumeno.',
         progressStagesOff: 'Velja le, ko je vklopljeno »Po stopnjah«.',
+        loading: 'Nalaganje',
+        preload: 'Vnaprej naloži ves zemljevid (prvič okoli 50 MB)',
+        preloadLoading: 'Nalaganje vnaprej: {percent} %. Premikanje po zemljevidu ga lahko še nalaga.',
+        preloadDone: 'Ves je v tem brskalniku: premikanje po zemljevidu ne nalaga ničesar več.',
+        preloadOff: 'Izklopljeno: deli zemljevida se naložijo, ko jih pogledate.',
+        preloadFailed: 'Ni prišlo vse: povezava je odpovedala. Ostalo pride ob naslednjem obisku.',
+        preloadSaveData: 'Ne, dokler brskalnik varčuje s prenosom podatkov (varčevanje s podatki ali počasna povezava).',
+        preloadUnavailable: 'Ta brskalnik ne more hraniti zemljevida za to stran (zasebno okno?).',
     },
     // Senčenje napredka vasi in njegova legenda (map/progress-colors.js)
     progress: {

@@ -53,6 +53,23 @@
         }
     ],
     "built": "2026-11-10",
+    "fonts": [
+        "fonts/Noto Sans Bold/0-255.pbf",
+        "fonts/Noto Sans Bold/1024-1279.pbf",
+        "fonts/Noto Sans Bold/256-511.pbf",
+        "fonts/Noto Sans Bold/512-767.pbf",
+        "fonts/Noto Sans Bold/8192-8447.pbf",
+        "fonts/Noto Sans Italic/0-255.pbf",
+        "fonts/Noto Sans Italic/1024-1279.pbf",
+        "fonts/Noto Sans Italic/256-511.pbf",
+        "fonts/Noto Sans Italic/512-767.pbf",
+        "fonts/Noto Sans Italic/8192-8447.pbf",
+        "fonts/Noto Sans Regular/0-255.pbf",
+        "fonts/Noto Sans Regular/1024-1279.pbf",
+        "fonts/Noto Sans Regular/256-511.pbf",
+        "fonts/Noto Sans Regular/512-767.pbf",
+        "fonts/Noto Sans Regular/8192-8447.pbf"
+    ],
     "release": "20261101_080013_pt",
     "source": "OpenFreeMap",
     "style": "https://tiles.openfreemap.org/styles/liberty"

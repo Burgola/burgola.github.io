@@ -23,7 +23,7 @@ export const VIEW_DEFAULTS = {
     field: true,
     road: true,           // named physical roads and paths, independently of address streets
     building: true,
-    places: true,         // our own places (data/mapper/place.json)
+    places: true,         // our own places (TBMap's, not GURS's)
     pois: true,           // the base map's businesses and other points of interest (background.js)
     roadNames: true,      // and its road and street names
     progress: false,      // settlements shaded by how much is checked (progress-colors.js)
@@ -34,6 +34,7 @@ export const VIEW_DEFAULTS = {
     namesZoom: 0,         // zoom levels later (+) or earlier (-) local names appear
     textScale: 1,         // every label on the map (text-size.js)
     namesScale: 1,        // and on top of that our names: local, house, places
+    preload: true,        // fetch the whole map ahead, on the website (preload.js)
 };
 
 // The steps of the "names appear" slider, earliest to latest.

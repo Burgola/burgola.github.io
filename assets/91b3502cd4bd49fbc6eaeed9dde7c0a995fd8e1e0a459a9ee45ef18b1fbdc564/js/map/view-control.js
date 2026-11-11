@@ -5,6 +5,7 @@
 import { t, onLanguageChange } from '../i18n/i18n.js';
 import { getView, setView, resetView, onViewChange, NAMES_ZOOM_STEPS, TEXT_SCALE_STEPS } from './view-settings.js';
 import { progressThresholds } from './progress-colors.js';
+import { onPreloadStatus } from './preload.js';
 
 // Sliders: a view setting moved through a list of steps.
 const SLIDERS = {
@@ -21,6 +22,8 @@ const SECTIONS = [
     { title: 'view.names', sliders: ['namesZoom'], rows: ['hamlet', 'relief', 'water', 'field', 'road', 'building', 'region', 'places'] },
     { title: 'view.basemap', rows: ['pois', 'roadNames'] },
     { title: 'view.mapping', rows: ['progress'] },
+    // The editor reads the map from its own disk: nothing to fetch ahead (map.js).
+    ...(window.tbmapEditorOptions ? [] : [{ title: 'view.loading', rows: ['preload'] }]),
 ];
 
 const el = (tag, className, text) => {
@@ -58,6 +61,7 @@ export class ViewControl {
         onLanguageChange(() => this.render());
         onViewChange(() => this.sync());
         this.render();
+        if (this.preloadNote) onPreloadStatus(status => { this.preload = status; this.syncPreload(); });
         return this.container;
     }
 
@@ -68,8 +72,19 @@ export class ViewControl {
     toggle(open = this.menu.hidden) {
         this.menu.hidden = !open;
         this.button.setAttribute('aria-expanded', String(open));
-        // No taller than the room below its top: it scrolls inside, the page never does.
-        if (open) this.menu.style.maxHeight = `${Math.max(160, innerHeight - this.menu.getBoundingClientRect().top - 12)}px`;
+        // No taller than the room below its top: it scrolls inside, the page never does. On a
+        // short screen (a phone on its side) it moves up beside the buttons to find that room.
+        // On a narrow phone it is a sheet along the bottom, whose height the style sheet sets.
+        if (!open) return;
+        this.menu.style.top = '';
+        this.menu.style.maxHeight = '';
+        if (getComputedStyle(this.menu).position === 'fixed') return;
+        const top = this.menu.getBoundingClientRect().top;
+        const highest = this.container.closest('.maplibregl-map').getBoundingClientRect().top + 10;
+        const wanted = Math.min(this.menu.scrollHeight, innerHeight - highest - 12);
+        const up = Math.max(0, Math.min(wanted - (innerHeight - top - 12), top - highest));
+        if (up) this.menu.style.top = `${-up}px`;
+        this.menu.style.maxHeight = `${Math.max(160, innerHeight - (top - up) - 12)}px`;
     }
 
     render() {
@@ -83,7 +98,12 @@ export class ViewControl {
         const reset = el('button', 'view-menu-reset', t('view.reset'));
         reset.type = 'button';
         reset.addEventListener('click', () => resetView());
-        head.append(el('div', 'view-menu-title', t('view.title')), reset);
+        const close = el('button', 'view-menu-reset view-menu-close', t('view.close'));
+        close.type = 'button';
+        close.addEventListener('click', () => { this.toggle(false); this.button.focus(); });
+        const actions = el('div', 'view-menu-actions');
+        actions.append(reset, close);
+        head.append(el('div', 'view-menu-title', t('view.title')), actions);
         const parts = [head];
 
         for (const section of SECTIONS) {
@@ -92,6 +112,7 @@ export class ViewControl {
             for (const key of section.rows) {
                 parts.push(this.row(key));
                 if (key === 'progress') parts.push(this.progressOptions());
+                if (key === 'preload') parts.push(this.preloadNote = el('div', 'view-menu-note view-menu-row-note'));
             }
         }
         this.menu.replaceChildren(...parts);
@@ -173,5 +194,18 @@ export class ViewControl {
         this.numbers.progressGreen.value = String(thresholds.green);
         for (const input of Object.values(this.numbers)) input.disabled = !view.progressStages;
         this.thresholdNote.textContent = view.progressStages ? t('view.progressYellow') : t('view.progressStagesOff');
+        this.syncPreload();
+    }
+
+    // How fetching ahead is going. Where the browser keeps it from happening, the switch is
+    // disabled and the note says why.
+    syncPreload() {
+        if (!this.preloadNote || !this.preload) return;
+        const { state, done, total } = this.preload;
+        const blocked = state === 'saveData' || state === 'unavailable';
+        this.inputs.preload.disabled = blocked;
+        this.preloadNote.textContent = state === 'loading'
+            ? t('view.preloadLoading', { percent: total ? Math.floor(100 * done / total) : 0 })
+            : t(`view.preload${state[0].toUpperCase()}${state.slice(1)}`);
     }
 }

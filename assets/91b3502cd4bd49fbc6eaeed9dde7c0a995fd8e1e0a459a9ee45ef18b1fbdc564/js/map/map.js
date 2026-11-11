@@ -18,6 +18,7 @@ import { repository } from '../data/DataRepository.js';
 import { BasemapControl } from './basemap-control.js';
 import { createAerial } from './aerial.js';
 import { createBasemap } from './basemap.js';
+import { basemapStyle } from './basemap-tiles.js';
 import { createBackground } from './background.js';
 import { createResolvedMap } from './resolved-map.js';
 import { createEditorDrawing } from './editor-drawing.js';
@@ -30,6 +31,7 @@ import { getView, setView, onViewChange } from './view-settings.js';
 import { ViewControl } from './view-control.js';
 import { lockToRegion } from './region-lock.js';
 import { createRegions } from './regions.js';
+import { createPreload } from './preload.js';
 
 const MODE_KEY = 'basemap';
 
@@ -58,28 +60,32 @@ function labelsStartId(map) {
 // the control.
 function addCredits(map) {
     let control = null, porabje = null, shownPorabje = getView().porabje;
+    // A short screen (a phone on its side) has no room for them in full either.
+    const short = matchMedia('(max-height: 500px)');
     const escape = value => String(value).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
     const render = () => {
         if (control) map.removeControl(control);
         control = new maplibregl.AttributionControl({
+            compact: short.matches || undefined,
             customAttribution: `${escape(repository.mapDocument?.attribution || 'GURS')}`
                 + `${porabje && getView().porabje !== false ? ` | ${escape(porabje.attribution)}` : ''} | ${t('credits.site')}: `
                 + '<a href="https://vladimirjanus.github.io" target="_blank" rel="noopener">Vladimir Januš</a>'
                 + ` · ${t('credits.mapping')}: Tim Bunderla`,
         });
         map.addControl(control, 'bottom-right');
-        // On a narrow screen MapLibre folds them into an (i) button, but opens it at first, over a
+        // On a narrow screen MapLibre folds them into an (i) button (and here on a short one), but opens it at first, over a
         // quarter of a phone's map: they start folded.
         const box = map.getContainer().querySelector('.maplibregl-ctrl-attrib.maplibregl-compact');
         if (box) { box.classList.remove('maplibregl-compact-show'); box.removeAttribute('open'); }
     };
     render();
+    short.addEventListener('change', render);
     onLanguageChange(render);
     onViewChange(view => { if (porabje && view.porabje !== shownPorabje) { shownPorabje = view.porabje; render(); } });
     repository.onChange(document => { if (document.kind === 1) { porabje = createRegions(document).area; render(); } });
 }
 
-export function initMap() {
+export async function initMap() {
     const message = document.getElementById('map-message');
     const loading = document.getElementById('map-loading');
     const doneLoading = () => { if (loading) loading.hidden = true; };
@@ -96,10 +102,18 @@ export function initMap() {
     // writes its position into the address as soon as it exists.)
     const firstVisit = !/[#&]pos=/.test(location.hash);
 
+    let style;
+    try {
+        style = await basemapStyle();
+    } catch (err) {
+        console.error('[Map] base map style failed to load', err);
+        showError();
+        return;
+    }
     let ready = false;
     const map = new maplibregl.Map({
         container: 'map',
-        style: CONFIG.mapStyle,
+        style,
         bounds: CONFIG.regionBounds,
         fitBoundsOptions: { padding: 24 },
         maxZoom: CONFIG.maxZoom,
@@ -145,6 +159,8 @@ export function initMap() {
         const panel = createSelectionPanel(document.getElementById('selection-panel'));
         const selection = createSelection(map, panel);
         const features = [createAerial(), createBasemap()];
+        // On the website the whole map is fetched ahead once it is drawn (the editor has it on disk).
+        if (!window.tbmapEditorOptions) features.push(createPreload());
         let resolved = null;
         const background = createBackground(selection, id => resolved?.label(id));
         if (data) {

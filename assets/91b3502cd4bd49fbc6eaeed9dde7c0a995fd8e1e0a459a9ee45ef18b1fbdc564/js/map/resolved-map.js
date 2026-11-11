@@ -235,7 +235,9 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
     const numbersOf = f => (f.kind === 5 ? [f] : housesOf(f.id)).filter(h => h.address?.number != null).map(h => `${h.address.number}${h.address.suffix}`).join(', ');
     // What a place is called on its card and in search: a house without a name by its address
     // (Puconci 343), not its cadastral building number.
-    const placeTitle = f => f.kind === 4 && !primaryName(f, language) && housesOf(f.id).length ? housesOf(f.id).map(addressText).join(', ') : featureTitle(f);
+    // A house number on its own is called by its address too (Bogojina 12, not 12).
+    const placeTitle = f => f.kind === 4 && !primaryName(f, language) && housesOf(f.id).length ? housesOf(f.id).map(addressText).join(', ')
+        : f.kind === 5 && !primaryName(f, language) && f.address ? addressText(f) : featureTitle(f);
     // What a building's one label says: its name and its house numbers.
     const houseLabel = f => ({
         house: true,
@@ -484,10 +486,17 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
                 const matches = [...places.values()].map(({ f, identifiers }) => {
                     const names = orderedNames(f, language), parent = feature(f.settlementId);
                     const address = f.kind === 4 ? housesOf(f.id).map(addressText).join(' ') : f.address ? addressText(f) : '';
-                    const hay = normalize([featureTitle(f), ...names.map(n => n.text), parent ? featureTitle(parent) : '', address, ...identifiers].join(' '));
+                    const own = normalize([featureTitle(f), ...names.map(n => n.text), address, ...identifiers].join(' '));
+                    const hay = `${own} ${parent ? normalize(featureTitle(parent)) : ''}`;
+                    if (!tokens.every(t => hay.includes(t))) return null;
+                    // A building with no name and no address (a barn, a shed) is listed only for what
+                    // is its own, its cadastral number: by its village alone it would be a line of
+                    // "House · Bogojina", a dozen alike, taking the places of the named ones.
+                    const title = placeTitle(f);
+                    if (f.kind === 4 && title === '—' && !tokens.some(t => own.includes(t))) return null;
                     const name = names.slice().sort((a, b) => closeness(a.text) - closeness(b.text))[0];
-                    return { f, name, rank: Math.min(closeness(featureTitle(f)), name ? closeness(name.text) : 2), match: tokens.every(t => hay.includes(t)) };
-                }).filter(m => m.match).sort((a, b) => a.rank - b.rank || featureTitle(a.f).localeCompare(featureTitle(b.f)));
+                    return { f, name, title, rank: Math.min(closeness(featureTitle(f)), name ? closeness(name.text) : 2) };
+                }).filter(Boolean).sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title, undefined, { numeric: true }));
                 const found = matches.length;
                 matches.splice(35);
                 results.replaceChildren();
@@ -504,9 +513,10 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
                     });
                     results.append(button);
                 }
-                for (const { f, name } of matches) {
-                    const title = placeTitle(f), addressed = f.kind === 4 && housesOf(f.id).length;
-                    const context = addressed ? (primaryName(f, language) ? housesOf(f.id).map(addressText).join(', ') : '') : f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
+                for (const { f, name, title } of matches) {
+                    const addressed = f.kind === 4 && housesOf(f.id).length;
+                    let context = addressed ? (primaryName(f, language) ? housesOf(f.id).map(addressText).join(', ') : '') : f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
+                    if (context === title) context = '';
                     const alias = name && name.text !== featureTitle(f) && normalize(name.text).includes(query) ? ` · ${name.text}${name.current ? '' : ` (${tr('historic')})`}` : '';
                     const button = document.createElement('button');button.type = 'button';button.textContent = `${title === '—' ? '' : `${title} · `}${kindName(f)}${context ? ` · ${context}` : ''}${alias}`;
                     button.addEventListener('click', () => { selection.select('feature', f.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);

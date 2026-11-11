@@ -48,6 +48,7 @@ export default {
         open: 'Map settings',
         title: 'Map settings',
         reset: 'Reset',
+        close: 'Close',
         borders: 'Borders',
         drzava: 'State border',
         obcine: 'Municipalities',
@@ -86,6 +87,14 @@ export default {
         progressGreen: 'Green from',
         progressYellow: 'Yellow in between.',
         progressStagesOff: 'Only used with "Show by stage" on.',
+        loading: 'Loading',
+        preload: 'Load the whole map ahead (about 50 MB the first time)',
+        preloadLoading: 'Loading ahead: {percent} %. Moving around the map may still load parts of it.',
+        preloadDone: 'All of it is in this browser: moving around the map loads nothing more.',
+        preloadOff: 'Off: parts of the map load as you look at them.',
+        preloadFailed: 'Not all of it came: the connection failed. The rest comes at the next visit.',
+        preloadSaveData: 'Not while the browser is saving data (data saver or a slow connection).',
+        preloadUnavailable: 'This browser cannot keep the map for the site (a private window?).',
     },
     // The village progress shading and its legend (map/progress-colors.js)
     progress: {

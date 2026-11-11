@@ -1,16 +1,24 @@
 import { decodeDat } from './DatDecoder.js';
+import { FileStore } from '../core/file-store.js';
+
+// The files of one publication of the website are in a folder named for their content
+// (assets/<hash>/data/): kept in this browser until the next one (core/file-store.js), and
+// fetched ahead by map/preload.js. Elsewhere (the editor, which previews data as it changes; a
+// test server) they are fetched each time.
+const storeFor = base => new FileStore('data', globalThis.window?.tbmapEditorOptions ? '' : /\/assets\/([0-9a-f]{16,})\//.exec(base)?.[1] || '');
 
 export class DataRepository {
     constructor(base = new URL('../../data/', import.meta.url).href) {
-        this.base = base; this.features = new Map(); this.names = new Map(); this.searchFeatures = new Map(); this.requests = new Map(); this.listeners = new Set(); this.generation = 0; this.mapDocument = null;
+        this.base = base; this.files = storeFor(base); this.features = new Map(); this.names = new Map(); this.searchFeatures = new Map(); this.requests = new Map(); this.listeners = new Set(); this.generation = 0; this.mapDocument = null;
     }
+    url(path) { return new URL(path, new URL(this.base, globalThis.document?.baseURI)).href; }
     async fetch(path, kind) {
         if (this.requests.has(path)) return this.requests.get(path);
         const generation = this.generation;
         const pending = (async () => {
-            const response = await fetch(`${this.base}${path}`);
-            if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-            const document = await decodeDat(await response.arrayBuffer());
+            const bytes = await this.files.get(this.url(path));
+            if (!bytes) throw new Error(`${path}: HTTP 404`);
+            const document = await decodeDat(bytes);
             if (document.kind !== kind) throw new Error(`${path}: incorrect data kind`);
             if (generation !== this.generation) { const error = new Error('This map request belongs to an earlier preview'); error.code = 'STALE_PREVIEW'; throw error; }
             const target = kind === 3 ? this.searchFeatures : this.features;
@@ -44,6 +52,7 @@ export class DataRepository {
     }
     onChange(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
     reset(base = this.base) {
+        if (base !== this.base) this.files = storeFor(base);
         ++this.generation; this.base = base; this.features.clear(); this.names.clear(); this.searchFeatures.clear(); this.requests.clear(); this.mapDocument = null;
     }
 }
