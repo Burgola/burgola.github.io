@@ -84,6 +84,8 @@ export function createAerial() {
         button = document.createElement('button');
         button.type = 'button';
         button.addEventListener('click', retry);
+        // On a phone the text is cut to two lines (the style sheet): a tap shows all of it.
+        text.addEventListener('click', () => bar.classList.toggle('expanded'));
         bar.append(text, button);
         map.getContainer().append(bar);
         onLanguageChange(render);
