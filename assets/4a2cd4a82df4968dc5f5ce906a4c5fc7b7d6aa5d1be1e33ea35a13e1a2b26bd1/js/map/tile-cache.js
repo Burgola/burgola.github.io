@@ -1,9 +1,9 @@
-// Fetches the aerial photo tiles: keeps them in this browser, tries again
-// when the GURS server fails, and says how it is going (onTileStatus), so
+// Fetches the aerial photo tiles, this website's own and GURS's and Lechner's: keeps them in
+// this browser, tries again when a server fails, and says how it is going (onTileStatus), so
 // the map can tell the visitor why the photo is missing.
 //
-// The GURS WMS sends no caching headers, so on its own the browser fetches a
-// tile again every time it is shown — zooming back out, panning back, the
+// The GURS WMS sends no caching headers (and this website only short ones), so on its own the
+// browser fetches a tile again every time it is shown — zooming back out, panning back, the
 // next visit. Tiles fetched through here are kept in memory for this visit
 // and in Cache Storage for later ones: at most MAX_STORED of them, each for
 // at most MAX_AGE, oldest dropped first. Only what the visitor has already
@@ -95,18 +95,26 @@ function inside(rings, [x, y]) {
     return result;
 }
 
-// A tile URL's flags after # (clip=, clear-white) and the Web Mercator box it covers.
-function parse(url) {
+// A tile URL's flags after # (clip=, clear-white) and the Web Mercator box it covers: a WMS
+// tile's bbox, or the place of a tile at .../{z}/{x}/{y}.<type>.
+export function parse(url) {
     const [base, fragment = ''] = url.split('#');
     const flags = new URLSearchParams(fragment);
+    const address = new URL(base);
     let box = null;
-    for (const [key, value] of new URL(base).searchParams)
+    for (const [key, value] of address.searchParams)
         if (key.toLowerCase() === 'bbox') box = value.split(',').map(Number);
+    const tile = !box && /\/(\d+)\/(\d+)\/(\d+)\.\w+$/.exec(address.pathname);
+    if (tile) {
+        const [z, x, y] = tile.slice(1).map(Number), half = Math.PI * EARTH, size = 2 * half / 2 ** z;
+        box = [-half + x * size, half - (y + 1) * size, -half + (x + 1) * size, half - y * size];
+    }
     return { base, flags, box: box?.length === 4 && box.every(Number.isFinite) ? box : null };
 }
 
 // fn({ loading, failed, error, retrying }) whenever it changes. error: the
-// last failure — { kind: 'timeout' | 'offline' | 'http' | 'wms' | 'network', detail }.
+// last failure — { kind: 'timeout' | 'offline' | 'http' | 'wms' | 'network', detail, server },
+// server the host name it came from.
 export function onTileStatus(fn) {
     listeners.add(fn);
 }
@@ -160,6 +168,7 @@ export function registerTileCache() {
                     if (!abort.signal.aborted) {
                         status.failed.add(url);
                         status.error = err instanceof TileError ? err : new TileError('network', String(err?.message || err), true);
+                        status.error.server = new URL(url).hostname;
                         console.warn('[Aerial] tile failed', status.error.message, url);
                     }
                     throw err;

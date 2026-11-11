@@ -1,12 +1,15 @@
 // GURS DOF025 aerial photo, shown in Satellite mode. It sits above every
 // drawn-map fill and road but below all labels, which gives a hybrid view.
+// Up to zoom 16 it comes from this website (Tools/aerial/aerial.py made the
+// tiles), shown stretched beyond; from zoom 17 GURS's own WMS draws over it,
+// so where that is slow or failing the stretched photo still shows.
 // Porabje, across the border in Hungary, has Lechner's photo above it while
 // Porabje is shown (view.porabje). Each photo covers only its own area,
 // Prekmurje and Porabje: around them the drawn map stays, and no photo is
 // asked for there (tile-cache.js, setClip).
 //
 // While the photo is on, a status line at the bottom of the map says when
-// pieces of it are slow or missing and why (the GURS server timed out,
+// pieces of it are slow or missing and why (a photo server timed out,
 // answered with an error, or the computer is offline), with a button to
 // ask for them again. Missing pieces are also asked for again by
 // themselves every RETRY_EVERY while any are missing — MapLibre on its own
@@ -18,8 +21,14 @@ import { cachedUrl, registerTileCache, onTileStatus, forgetFailures, setClip } f
 
 // A photo's tile URL, shown only inside the outline named.
 const clipped = (url, name) => cachedUrl(`${url}${url.includes('#') ? '&' : '#'}clip=${name}`);
+// The editor shows Web/ from its own disk, without the photo tiles: those come from the website.
+// (Joined as text: URL() would escape the {z}/{x}/{y} MapLibre fills in.)
+const ownUrl = () => clipped(new URL('./', window.tbmapEditorOptions ? CONFIG.site : document.baseURI).href + CONFIG.aerial.own, 'prekmurje');
 const tileUrl = () => clipped(CONFIG.aerial.tiles, 'prekmurje');
 const porabjeUrl = () => clipped(CONFIG.aerialPorabje.tiles, 'porabje');
+// The photo servers by name, for the status line; any other by its address.
+const SERVERS = { [new URL(CONFIG.aerial.tiles).hostname]: 'GURS', [new URL(CONFIG.aerialPorabje.tiles).hostname]: 'Lechner' };
+const serverName = host => SERVERS[host] || host;
 
 const SLOW_AFTER = 4000;        // ms of loading before "still loading" shows
 const RETRY_EVERY = 15000;      // ms between asking for missing pieces again
@@ -37,22 +46,21 @@ export function createAerial() {
     // fetched again.
     function retry() {
         forgetFailures();
+        map.getSource('aerial-own')?.setTiles([ownUrl()]);
         map.getSource('aerial')?.setTiles([tileUrl()]);
         map.getSource('aerial-porabje')?.setTiles([porabjeUrl()]);
     }
 
     function applyVisibility() {
-        map.setLayoutProperty('aerial', 'visibility', shown ? 'visible' : 'none');
+        for (const id of ['aerial-own', 'aerial']) map.setLayoutProperty(id, 'visibility', shown ? 'visible' : 'none');
         if (map.getLayer('aerial-porabje')) map.setLayoutProperty('aerial-porabje', 'visibility', shown && porabje ? 'visible' : 'none');
     }
 
     function message() {
         const e = state.error;
-        if (state.failed) {
-            const why = !e ? '' : t(`aerial.error.${e.kind}`, { detail: e.detail });
-            return t('aerial.missing', { count: state.failed, why });
-        }
-        if (state.retrying) return t('aerial.retrying', { why: e ? t(`aerial.error.${e.kind}`, { detail: e.detail }) : '' });
+        const why = !e ? '' : t(`aerial.error.${e.kind}`, { detail: e.detail, server: serverName(e.server) });
+        if (state.failed) return t('aerial.missing', { count: state.failed, why });
+        if (state.retrying) return t('aerial.retrying', { why });
         if (state.loading && Date.now() - loadingSince >= SLOW_AFTER) return t('aerial.slow', { count: state.loading });
         return '';
     }
@@ -102,16 +110,13 @@ export function createAerial() {
             setClip('prekmurje', ctx.data?.outline.features[0]?.geometry || null);
             setClip('porabje', ctx.porabjeOutline || null);
             const [[west, south], [east, north]] = CONFIG.regionBounds;
-            map.addSource('aerial', {
-                type: 'raster',
-                tiles: [tileUrl()], // kept in the browser (tile-cache.js) or by the editor
-                tileSize: CONFIG.aerial.tileSize,
-                // Only requested in and just around the region.
-                bounds: [west - 0.05, south - 0.05, east + 0.05, north + 0.05],
-                maxzoom: CONFIG.maxZoom,
-                attribution: CONFIG.aerial.attribution,
-            });
-            map.addLayer({ id: 'aerial', type: 'raster', source: 'aerial', layout: { visibility: 'none' } }, ctx.beforeId);
+            // Both kept in the browser (tile-cache.js), and only asked for in and just around the region.
+            const photo = { type: 'raster', tileSize: CONFIG.aerial.tileSize, bounds: [west - 0.05, south - 0.05, east + 0.05, north + 0.05], attribution: CONFIG.aerial.attribution };
+            const [ownFrom, ownTo] = CONFIG.aerial.ownZooms;
+            map.addSource('aerial-own', { ...photo, tiles: [ownUrl()], minzoom: ownFrom, maxzoom: ownTo });
+            map.addSource('aerial', { ...photo, tiles: [tileUrl()], minzoom: CONFIG.aerial.from, maxzoom: CONFIG.maxZoom });
+            map.addLayer({ id: 'aerial-own', type: 'raster', source: 'aerial-own', layout: { visibility: 'none' } }, ctx.beforeId);
+            map.addLayer({ id: 'aerial', type: 'raster', source: 'aerial', minzoom: CONFIG.aerial.from - 0.5, layout: { visibility: 'none' } }, ctx.beforeId);
             if (ctx.porabje) {
                 const [[w, s], [e, n]] = ctx.porabje;
                 map.addSource('aerial-porabje', {

@@ -48,6 +48,10 @@ export default {
         title: 'Nastavitve zemljevida',
         reset: 'Ponastavi',
         close: 'Zapri',
+        all: 'Vse vklopi ali izklopi',
+        count: 'vklopljeno {on} od {all}',
+        on: 'vklopljeno',
+        off: 'izklopljeno',
         borders: 'Meje',
         drzava: 'Državna meja',
         obcine: 'Občine',
@@ -61,7 +65,7 @@ export default {
         namesZoom: 'Imena se pokažejo ob povečavi',
         earlier: 'prej',
         later: 'pozneje',
-        text: 'Velikost besedila',
+        text: 'Besedilo',
         textScale: 'Vse besedilo',
         namesScale: 'Domača in hišna imena',
         smaller: 'manjše',
@@ -110,10 +114,10 @@ export default {
     // Vrstica o stanju letalskega posnetka (map/aerial.js, map/tile-cache.js)
     aerial: {
         slow: {
-            one: 'Letalski posnetek se nalaga počasi (od GURS še prihaja {count} kos) …',
-            two: 'Letalski posnetek se nalaga počasi (od GURS še prihajata {count} kosa) …',
-            few: 'Letalski posnetek se nalaga počasi (od GURS še prihajajo {count} kosi) …',
-            other: 'Letalski posnetek se nalaga počasi (od GURS še prihaja {count} kosov) …',
+            one: 'Letalski posnetek se nalaga počasi (še prihaja {count} kos) …',
+            two: 'Letalski posnetek se nalaga počasi (še prihajata {count} kosa) …',
+            few: 'Letalski posnetek se nalaga počasi (še prihajajo {count} kosi) …',
+            other: 'Letalski posnetek se nalaga počasi (še prihaja {count} kosov) …',
         },
         retrying: 'Strežnik letalskega posnetka je imel težavo, poskušam znova … {why}',
         missing: {
@@ -124,11 +128,11 @@ export default {
         },
         retry: 'Poskusi znova zdaj',
         error: {
-            timeout: 'Strežnik GURS za posnetke ni odgovoril v {detail}.',
+            timeout: 'Strežnik {server} za posnetke ni odgovoril v {detail}.',
             offline: 'Računalnik ni povezan z internetom.',
-            http: 'Strežnik GURS za posnetke je odgovoril z napako ({detail}).',
-            wms: 'Strežnik GURS je namesto posnetka poslal napako: {detail}',
-            network: 'Strežnik GURS za posnetke ni dosegljiv ({detail}).',
+            http: 'Strežnik {server} za posnetke je odgovoril z napako ({detail}).',
+            wms: 'Strežnik {server} je namesto posnetka poslal napako: {detail}',
+            network: 'Strežnik {server} za posnetke ni dosegljiv ({detail}).',
         },
     },
     // Kdo je kaj naredil, vsakemu sledi ime (index.html, zasluge na zemljevidu)

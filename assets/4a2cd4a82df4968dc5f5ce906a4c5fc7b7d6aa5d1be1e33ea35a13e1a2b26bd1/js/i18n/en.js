@@ -49,6 +49,10 @@ export default {
         title: 'Map settings',
         reset: 'Reset',
         close: 'Close',
+        all: 'All on or off',
+        count: '{on} of {all} on',
+        on: 'on',
+        off: 'off',
         borders: 'Borders',
         drzava: 'State border',
         obcine: 'Municipalities',
@@ -62,7 +66,7 @@ export default {
         namesZoom: 'Names appear when zoomed in',
         earlier: 'sooner',
         later: 'later',
-        text: 'Text size',
+        text: 'Text',
         textScale: 'All text',
         namesScale: 'Local and house names',
         smaller: 'smaller',
@@ -111,8 +115,8 @@ export default {
     // The aerial photo's status line (map/aerial.js, map/tile-cache.js)
     aerial: {
         slow: {
-            one: 'The aerial photo is loading slowly (1 piece still coming from GURS)…',
-            other: 'The aerial photo is loading slowly ({count} pieces still coming from GURS)…',
+            one: 'The aerial photo is loading slowly (1 piece still coming)…',
+            other: 'The aerial photo is loading slowly ({count} pieces still coming)…',
         },
         retrying: 'The aerial photo server had a problem, trying again… {why}',
         missing: {
@@ -121,11 +125,11 @@ export default {
         },
         retry: 'Try again now',
         error: {
-            timeout: 'The GURS photo server did not answer within {detail}.',
+            timeout: 'The {server} photo server did not answer within {detail}.',
             offline: 'This computer is offline.',
-            http: 'The GURS photo server answered with an error ({detail}).',
-            wms: 'The GURS photo server sent an error instead of the photo: {detail}',
-            network: 'The GURS photo server cannot be reached ({detail}).',
+            http: 'The {server} photo server answered with an error ({detail}).',
+            wms: 'The {server} photo server sent an error instead of the photo: {detail}',
+            network: 'The {server} photo server cannot be reached ({detail}).',
         },
     },
     // Who did what, each followed by a name, and the contact address (index.html, map credits)

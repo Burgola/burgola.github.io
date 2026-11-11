@@ -7,7 +7,7 @@
 // Only on the website (the editor reads its own disk; map.js adds this there only), while
 // the map settings say so (view.preload), and not where the browser asks to save data. Quiet:
 // a few files at a time, at low priority, what is under the view first, then outwards.
-// (The aerial photo is not fetched ahead: it is far too big, and not ours.)
+// (The aerial photo is not fetched ahead: even this website's own part of it is a few hundred MB.)
 
 import { repository } from '../data/DataRepository.js';
 import { FeatureKind } from '../data/DatDecoder.js';

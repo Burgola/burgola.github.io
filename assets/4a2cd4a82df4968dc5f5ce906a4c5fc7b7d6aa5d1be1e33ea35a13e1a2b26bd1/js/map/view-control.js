@@ -6,6 +6,7 @@ import { t, onLanguageChange } from '../i18n/i18n.js';
 import { getView, setView, resetView, onViewChange, NAMES_ZOOM_STEPS, TEXT_SCALE_STEPS } from './view-settings.js';
 import { progressThresholds } from './progress-colors.js';
 import { onPreloadStatus } from './preload.js';
+import { load, save } from '../core/storage.js';
 
 // Sliders: a view setting moved through a list of steps.
 const SLIDERS = {
@@ -15,16 +16,22 @@ const SLIDERS = {
 };
 
 // Sections of the menu: sliders, then rows switched on and off.
+// Each group folds open and shut (remembered in this browser), says how many of its
+// switches are on, and has one switch for all of them. Open at first: only the progress.
 const SECTIONS = [
-    { title: 'view.text', sliders: ['textScale', 'namesScale'], rows: [] },
-    { title: 'view.borders', rows: ['drzava', 'obcine', 'naselja', 'podregije', 'mask'] },
-    { title: 'view.houses', rows: ['houseNumbers', 'houseNames'] },
-    { title: 'view.names', sliders: ['namesZoom'], rows: ['hamlet', 'relief', 'water', 'field', 'road', 'building', 'region', 'places'] },
-    { title: 'view.basemap', rows: ['pois', 'roadNames'] },
-    { title: 'view.mapping', rows: ['progress'] },
+    { id: 'mapping', title: 'view.mapping', rows: ['progress'], open: true },
+    { id: 'text', title: 'view.text', sliders: ['textScale', 'namesScale', 'namesZoom'], rows: [] },
+    { id: 'names', title: 'view.names', rows: ['hamlet', 'relief', 'water', 'field', 'road', 'building', 'region', 'places'] },
+    { id: 'houses', title: 'view.houses', rows: ['houseNumbers', 'houseNames'] },
+    { id: 'borders', title: 'view.borders', rows: ['drzava', 'obcine', 'naselja', 'podregije', 'mask'] },
+    { id: 'basemap', title: 'view.basemap', rows: ['pois', 'roadNames'] },
     // The editor reads the map from its own disk: nothing to fetch ahead (map.js).
-    ...(window.tbmapEditorOptions ? [] : [{ title: 'view.loading', rows: ['preload'] }]),
+    ...(window.tbmapEditorOptions ? [] : [{ id: 'loading', title: 'view.loading', rows: ['preload'] }]),
 ];
+const OPEN_KEY = 'viewMenuGroupsOpen';
+const readOpen = () => {
+    try { return JSON.parse(load(OPEN_KEY) || 'null'); } catch { return null; }
+};
 
 const el = (tag, className, text) => {
     const n = document.createElement(tag);
@@ -105,15 +112,51 @@ export class ViewControl {
         actions.append(reset, close);
         head.append(el('div', 'view-menu-title', t('view.title')), actions);
         const parts = [head];
+        this.groups = [];
+        this.opened ||= new Set(readOpen() || SECTIONS.filter(s => s.open).map(s => s.id));
 
         for (const section of SECTIONS) {
-            parts.push(el('div', 'view-menu-section', t(section.title)));
-            for (const key of section.sliders || []) parts.push(this.slider(key));
-            for (const key of section.rows) {
-                parts.push(this.row(key));
-                if (key === 'progress') parts.push(this.progressOptions());
-                if (key === 'preload') parts.push(this.preloadNote = el('div', 'view-menu-note view-menu-row-note'));
+            const group = el('div', 'view-menu-group');
+            const header = el('div', 'view-menu-group-head');
+            const fold = el('button', 'view-menu-group-toggle');
+            fold.type = 'button';
+            const count = el('span', 'view-menu-group-count');
+            fold.append(el('span', 'view-menu-group-arrow'), el('span', 'view-menu-group-title', t(section.title)), count);
+            const body = el('div', 'view-menu-group-body');
+            const setOpen = (open) => {
+                body.hidden = !open;
+                fold.setAttribute('aria-expanded', String(open));
+                group.classList.toggle('open', open);
+            };
+            setOpen(this.opened.has(section.id));
+            fold.addEventListener('click', () => {
+                const open = body.hidden;
+                setOpen(open);
+                this.opened[open ? 'add' : 'delete'](section.id);
+                save(OPEN_KEY, JSON.stringify([...this.opened]));
+            });
+            header.append(fold);
+            // One switch for the whole group, where it has several.
+            let all = null;
+            if (section.rows.length > 1) {
+                const label = el('label', 'view-menu-row view-menu-all');
+                all = el('input');
+                all.type = 'checkbox';
+                all.setAttribute('aria-label', `${t(section.title)}: ${t('view.all')}`);
+                all.addEventListener('change', () => setView(Object.fromEntries(section.rows.map(k => [k, all.checked]))));
+                label.title = t('view.all');
+                label.append(all, el('span', 'view-switch'));
+                header.append(label);
             }
+            for (const key of section.sliders || []) body.append(this.slider(key));
+            for (const key of section.rows) {
+                body.append(this.row(key));
+                if (key === 'progress') body.append(this.progressOptions());
+                if (key === 'preload') body.append(this.preloadNote = el('div', 'view-menu-note view-menu-row-note'));
+            }
+            group.append(header, body);
+            parts.push(group);
+            this.groups.push({ section, count, all });
         }
         this.menu.replaceChildren(...parts);
         this.sync();
@@ -189,6 +232,17 @@ export class ViewControl {
         const view = getView();
         for (const [key, input] of Object.entries(this.inputs)) input.checked = view[key];
         for (const [key, range] of Object.entries(this.ranges)) range.value = String(stepOf(SLIDERS[key].steps, view[key]));
+        // Each group: how many of its switches are on; its own switch on when all are, half when some.
+        for (const { section, count, all } of this.groups) {
+            const on = section.rows.filter(k => view[k]).length;
+            count.textContent = !section.rows.length ? ''
+                : section.rows.length > 1 ? t('view.count', { on, all: section.rows.length })
+                : t(on ? 'view.on' : 'view.off');
+            if (all) {
+                all.checked = on === section.rows.length;
+                all.indeterminate = on > 0 && on < section.rows.length;
+            }
+        }
         const thresholds = progressThresholds(view);
         this.numbers.progressRed.value = String(thresholds.red);
         this.numbers.progressGreen.value = String(thresholds.green);
