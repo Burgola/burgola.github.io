@@ -50,7 +50,7 @@ export default {
         reset: 'Reset',
         close: 'Close',
         all: 'All on or off',
-        count: '{on} of {all} on',
+        count: '{on}/{all}',
         on: 'on',
         off: 'off',
         borders: 'Borders',

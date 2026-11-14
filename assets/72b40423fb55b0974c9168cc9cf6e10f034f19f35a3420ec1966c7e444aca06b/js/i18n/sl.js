@@ -49,7 +49,7 @@ export default {
         reset: 'Ponastavi',
         close: 'Zapri',
         all: 'Vse vklopi ali izklopi',
-        count: 'vklopljeno {on} od {all}',
+        count: '{on}/{all}',
         on: 'vklopljeno',
         off: 'izklopljeno',
         borders: 'Meje',
