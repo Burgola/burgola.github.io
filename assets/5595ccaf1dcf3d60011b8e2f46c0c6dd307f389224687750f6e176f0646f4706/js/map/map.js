@@ -4,7 +4,7 @@
 // "map feature": an object with
 //   add(map, ctx)      add sources, layers and events; ctx = { beforeId, data }
 //   setMode(mode)      optional, 'map' | 'aerial'
-//   setLanguage(lang)  optional, a key of i18n LANGUAGES
+//   setLanguage(lang)  optional, the language whose names to show (i18n getNameLanguage)
 //   refreshNames()     optional, mapper data changed: redraw names from it
 //   applyView(view)    optional, the map settings changed (view-settings.js)
 // Features with selectable things register a selection kind
@@ -12,7 +12,7 @@
 // feature, not into this file.
 
 import { CONFIG } from '../config.js';
-import { t, getLanguage, onLanguageChange, setLanguage as changeLanguage } from '../i18n/i18n.js';
+import { t, getNameLanguage, onLanguageChange, setLanguage as changeLanguage, setTexts } from '../i18n/i18n.js';
 import { load, save } from '../core/storage.js';
 import { repository } from '../data/DataRepository.js';
 import { BasemapControl } from './basemap-control.js';
@@ -172,11 +172,11 @@ export async function initMap() {
         for (const feature of features) feature.add(map, ctx);
 
         const setMode = (mode) => features.forEach((f) => f.setMode?.(mode));
-        const setLanguage = (lang) => features.forEach((f) => f.setLanguage?.(lang));
+        const setLanguage = () => features.forEach((f) => f.setLanguage?.(getNameLanguage()));
 
         const mode = load(MODE_KEY) === 'aerial' ? 'aerial' : 'map';
         setMode(mode);
-        setLanguage(getLanguage());
+        setLanguage();
         onLanguageChange(setLanguage);
         const applyView = (view) => features.forEach((f) => f.applyView?.(view));
         applyView(getView());
@@ -216,7 +216,13 @@ export async function initMap() {
         // of this page. Nothing on the public site listens.
         const drawing = window.tbmapEditorOptions ? createEditorDrawing(map, selection) : null;
         const context = window.tbmapEditorOptions ? createEditorContext(map) : null;
-        window.tbmap = { map, selection, repository, drawing, context, setLanguage: changeLanguage, setView, reload: base => resolved?.reload(base), buildingOutline: id => resolved?.buildingOutline(id) || null, pickTowns: on => { resolved?.setPickingTowns(on); selection.setPicking(on); } };
+        // websiteLook: the editor's preview of a translation shows the page as visitors see it, with its
+        // top bar and place cards; setTexts gives it the texts being written.
+        const websiteLook = (on) => {
+            if (on) delete document.documentElement.dataset.nativeEditor; else document.documentElement.dataset.nativeEditor = 'true';
+            requestAnimationFrame(() => map.resize());
+        };
+        window.tbmap = { map, selection, repository, drawing, context, setLanguage: changeLanguage, setTexts, websiteLook, setView, reload: base => resolved?.reload(base), buildingOutline: id => resolved?.buildingOutline(id) || null, pickTowns: on => { resolved?.setPickingTowns(on); selection.setPicking(on); } };
         window.dispatchEvent(new CustomEvent('tbmap:ready', { detail: window.tbmap }));
         // Loaded once what is now on the map has been drawn.
         if (data) map.once('idle', doneLoading); else showError();

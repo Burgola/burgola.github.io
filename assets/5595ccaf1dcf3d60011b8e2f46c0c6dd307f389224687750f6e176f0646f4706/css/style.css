@@ -894,6 +894,31 @@ a.sp-action { text-decoration: none; }
 .page .about-tips { margin: 0; padding-left: 20px; color: var(--text-muted); }
 .page .about-tips li { margin: 6px 0; }
 
+/* Whether visits may be counted (js/ui/analytics.js): asked once, at the bottom of the page. */
+.consent-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 40px; /* above the map's credits line */
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    width: max-content;
+    max-width: min(640px, calc(100% - 24px));
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    font: 14px/1.4 'Inter', system-ui, sans-serif;
+}
+.consent-bar > span:first-child { flex: 1 1 260px; }
+.consent-buttons { display: flex; gap: 8px; }
+.page .consent-choice button { margin-left: 6px; }
+
 .page .credits {
     margin-top: 32px;
     padding-top: 16px;

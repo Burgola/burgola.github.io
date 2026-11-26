@@ -11,7 +11,7 @@
 // ours lists the businesses in it (businessesIn).
 
 import { repository, title } from '../data/DataRepository.js';
-import { getLanguage, t } from '../i18n/i18n.js';
+import { getNameLanguage, t } from '../i18n/i18n.js';
 import { contains } from './regions.js';
 
 const SOURCE = 'openmaptiles';
@@ -87,7 +87,7 @@ export function kindOf(e) {
     }
 }
 export function titleOf(e) {
-    return e.shield ? e.ref : e.names[getLanguage()] || e.local || kindOf(e);
+    return e.shield ? e.ref : e.names[getNameLanguage()] || e.local || kindOf(e);
 }
 
 // A label as the card knows it. A point keeps its own place; a road, a river
@@ -190,11 +190,11 @@ export function createBackground(selection, ourLabel = () => null) {
     function describe(e) {
         const text = titleOf(e), rows = [];
         for (const [language, name] of Object.entries(e.names))
-            if (name !== text) rows.push({ label: `${language.toUpperCase()} · ${t('names.name')}`, value: name });
-        if (e.local && e.local !== text && !Object.values(e.names).includes(e.local)) rows.push({ label: t('names.name'), value: e.local });
+            if (name !== text) rows.push({ label: `${language.toUpperCase()} · ${t('card.name')}`, value: name });
+        if (e.local && e.local !== text && !Object.values(e.names).includes(e.local)) rows.push({ label: t('card.name'), value: e.local });
         const { building, settlement } = oursAt(e.position);
-        if (building) rows.push({ label: t('house.building'), value: ourLabel(building.id) || title(building, getLanguage()), select: { kind: 'feature', id: building.id } });
-        if (settlement) rows.push({ label: t('selection.naselje'), value: title(settlement, getLanguage()), select: { kind: 'feature', id: settlement.id } });
+        if (building) rows.push({ label: t('card.kind.building'), value: ourLabel(building.id) || title(building, getNameLanguage()), select: { kind: 'feature', id: building.id } });
+        if (settlement) rows.push({ label: t('card.settlement'), value: title(settlement, getNameLanguage()), select: { kind: 'feature', id: settlement.id } });
         rows.push({ label: t('background.source'), value: 'OpenStreetMap' });
         // Its own details (opening hours, a website, ...) are on OpenStreetMap, not in the tiles.
         const [lng, lat] = e.position.map(n => n.toFixed(6));

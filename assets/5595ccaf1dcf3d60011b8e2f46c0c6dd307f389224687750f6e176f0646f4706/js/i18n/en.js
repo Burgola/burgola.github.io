@@ -1,14 +1,17 @@
 // English. Every key here must also exist in sl.js (tools/check_i18n.mjs).
 export default {
+    // The language itself: its name and its button at the top right
     meta: {
         name: 'English',
         short: 'EN',
     },
+    // The site's name: in the top bar, the browser tab and the description for search engines
     site: {
         brand: 'Burgola Prekmurje Map',
         title: 'Burgola Prekmurje Map',
         description: 'Interactive map of Prekmurje',
     },
+    // The top bar: Map, About, Porabje, the language and the menu on a phone
     nav: {
         map: 'Map',
         about: 'About',
@@ -18,6 +21,7 @@ export default {
         porabje: 'Porabje',
         porabjeHint: 'Show Porabje, the Slovene villages across the border in Hungary',
     },
+    // The About page and the tips for using the map
     about: {
         title: 'About',
         body: 'Burgola Prekmurje Map is an interactive map of Prekmurje: its municipalities, villages, houses and the local names of its hills, fields and farms. More is coming soon.',
@@ -30,18 +34,14 @@ export default {
             location: 'On a phone, the location button shows where you are.',
         },
     },
-    // "Designed by <Vladimir Januš> and Tim Bunderla" — the names and the
-    // link are in index.html and js/map/map.js.
-    // The search box (map/search.js)
+    // The search box on the map (map/resolved-map.js)
     search: {
-        label: 'Search the map',
-        placeholder: 'Search places, houses, names…',
-        loading: 'Loading…',
-        none: 'Nothing found',
-        clear: 'Clear',
-        coordinates: 'Coordinates',
-        // a house's (or former house's) number before the houses were numbered again
-        oldNumber: 'old no. {number}',
+        placeholder: 'Search places, addresses and names…',
+        loading: 'Loading search…',
+        none: 'No results',
+        error: 'Search failed. Try again.',
+        // when there are too many results to show them all
+        more: 'The first {shown} of {count}: type more to narrow them down',
     },
     // The map settings menu (map/view-control.js)
     view: {
@@ -110,7 +110,6 @@ export default {
         between: '{from}–{to} %',
         from: '{from}–100 %',
         what: 'Share of the village\'s houses whose names are all checked, or that are confirmed to have no house name.',
-        loading: 'Loading…',
     },
     // The aerial photo's status line (map/aerial.js, map/tile-cache.js)
     aerial: {
@@ -138,6 +137,19 @@ export default {
         mapping: 'Mapping and upkeep',
         contact: 'Contact',
     },
+    // Whether visits may be counted with Google Analytics: the bar at the bottom of the page on a first
+    // visit, and the line on the About page that changes the answer (on the website only, not in the editor)
+    consent: {
+        question: 'May we count visits with Google Analytics? It tells us how many people use the map. Google stores cookies in your browser for it.',
+        yes: 'Yes',
+        no: 'No',
+        about: 'Counting visits with Google Analytics:',
+        allowed: 'allowed',
+        refused: 'not allowed',
+        unanswered: 'not answered yet',
+        change: 'Change',
+    },
+    // The map itself: the Map and Satellite buttons and the messages while it loads
     map: {
         basemap: {
             label: 'Map type',
@@ -145,25 +157,21 @@ export default {
             satellite: 'Satellite',
         },
         loading: 'Loading map…',
+        loadingHouses: 'Loading houses…',
         error: {
             title: 'The map could not be loaded.',
             body: 'Please try again later.',
         },
+        // when the map's data could not be loaded (a message at the top of the map)
+        dataError: {
+            title: 'Could not load the map data',
+            body: 'Reload the page to load the current published map.',
+            reload: 'Reload',
+        },
     },
+    // The buttons and the note on a place's card
     selection: {
         editorNote: "Editor's note:",
-        thirdName: 'Third name',
-        numberedName: 'Name {number}',
-        obcina: 'Municipality',
-        naselje: 'Settlement',
-        hungarianName: 'Hungarian: {name}',
-        naseljaCount: {
-            one: '{count} settlement',
-            other: '{count} settlements',
-        },
-        naseljaLabel: 'Settlements',
-        selectObcina: 'Municipality {name}',
-        selectNaselje: 'Settlement {name}',
         zoomTo: 'Zoom to',
         copyLink: 'Copy link',
         // the handle of the card at the bottom of a phone's screen
@@ -171,79 +179,88 @@ export default {
         linkCopied: 'Link copied',
         close: 'Close',
     },
-    house: {
-        kind: 'House',
-        oldNumber: 'Old house number',
-        // an old house number with the year (or years) it was used
-        oldNumberIn: 'Old house number ({year})',
-        post: 'Post office',
-        community: {
-            ks: 'Local community',
-            cs: 'District community',
-            vs: 'Village community',
+    // A place's card, opened by clicking the map or a search result (map/resolved-map.js)
+    card: {
+        // above its name: what the selected place is
+        kind: {
+            municipality: 'Municipality',
+            settlement: 'Settlement',
+            street: 'Street',
+            building: 'Building',
+            address: 'House number',
+            place: 'Place',
+            group: 'Group',
         },
+        // what a building is
+        building: {
+            0: 'Building',
+            1201: 'House',
+            1202: 'Church',
+            1203: 'Castle',
+            1205: 'Notable building',
+        },
+        // an area of whole villages: Prekmurje, Porabje (the region next to it), a subregion (Goričko) or a group of villages
+        region: {
+            own: 'Region',
+            next: 'Region',
+            subregion: 'Subregion',
+            villages: 'Group of villages',
+        },
+        // a place's names in order: Name, Alternative, Third name, Name 4…
+        name: 'Name',
+        alternative: 'Alternative',
+        thirdName: 'Third name',
+        numberedName: 'Name {number}',
+        // a name no longer in use
+        historic: 'Historical',
+        // the official GURS name, where it differs
+        gurs: 'GURS name',
+        kindOf: 'Kind',
+        settlement: 'Settlement',
+        municipality: 'Municipality',
+        address: 'Address',
+        // a municipality's or a region's villages, with their number after it
+        settlements: 'Settlements',
+        details: 'Details',
+        postal: 'Post office',
+        community: 'Local community',
         school: 'School district',
-        adminUnit: 'Administrative unit',
-        coordinates: 'Coordinates',
-        building: 'Building',
-        cadastralMunicipality: 'Cadastral municipality',
-        buildingNumber: 'Building number',
-        yearBuilt: 'Year built',
+        unit: 'Administrative unit',
+        cadastral: 'Cadastral municipality',
+        buildingNumber: 'Cadastral building number',
+        year: 'Year built',
         floors: 'Floors',
         dwellings: 'Dwellings',
-        businessPremises: 'Business premises',
-        typeLabel: 'Type',
-        structureLabel: 'Structure',
-        electricity: 'Electricity',
-        water: 'Water supply',
-        sewage: 'Sewerage',
-        gas: 'Gas',
-        otherAddresses: 'Other addresses in this building',
-        // GURS building register codes (tools/build_houses.mjs lists them)
-        type: {
-            0: 'No data',
-            1: 'Detached building',
-            2: 'End-terrace building',
-            3: 'Mid-terrace building',
-        },
-        structure: {
-            0: 'No data',
-            1: 'Brick',
-            2: 'Concrete, reinforced concrete',
-            3: 'Stone',
-            4: 'Wood',
-            5: 'Mixed materials',
-            6: 'Steel frame',
-            7: 'Prefabricated',
-            8: 'Other material',
-        },
-        connection: {
-            0: 'No data',
-            1: 'Yes',
-            2: 'No',
-        },
-    },
-    names: {
-        name: 'Name',
-        houseName: 'House name',
-        // shown under a mapper's name when the official one differs
-        govName: 'Official name',
-        variants: 'Also called',
-        noName: 'No known name',
-        // a settlement's, municipality's or street's former name (mapper data)
-        oldName: 'Old name',
-        oldNameIn: 'Old name ({year})',
-        variantsShow: { one: 'Show 1 name', other: 'Show {count} names' },
+        businesses: 'Business premises',
+        coordinates: 'Coordinates',
+        // whether the place still exists: Current, Historical or Unknown
+        existence: 'Existence',
+        current: 'Current',
+        unknown: 'Unknown',
+        locationScope: 'Location review',
+        oldNumbers: 'Historical house numbers',
+        // whether a name or a location is checked
         status: {
+            unreviewed: 'Unreviewed',
             confirmed: 'Confirmed',
-            confirmedGov: 'Confirmed (GURS)',
-            // a house without a name nobody has checked yet
-            unchecked: 'Unconfirmed',
-            gov: 'Unconfirmed (GURS)',
-            // only seen in the editor client, which still shows hidden names
-            hidden: 'Hidden',
+            uncertain: 'Uncertain',
+            disputed: 'Disputed',
+            rejected: 'Rejected',
+            unreadable: 'Unreadable',
+            stale: 'Needs recheck',
         },
-        // GURS Register of Geographical Names types (tools/build_names.mjs)
+        // the GURS row of the details: whether the place is in the GURS data
+        source: {
+            local: 'Missing from GURS',
+            absent: 'Absent from current GURS release',
+            unavailable: 'Source coverage unavailable',
+        },
+        // the labels at the two ends of a selected road or path
+        start: 'Start',
+        end: 'End',
+    },
+    // Kinds of places from the GURS Register of Geographical Names, in the Kind row of a place's card
+    names: {
         type: {
             1103: 'Hamlet',
             1104: 'Part of settlement',
@@ -264,25 +281,6 @@ export default {
             1000001: 'Road or path',
             other: 'Place name',
         },
-    },
-    // Streets (map/streets.js)
-    street: {
-        kind: 'Street',
-        houses: 'Houses on this street',
-        houseCount: 'Houses',
-    },
-    place: {
-        kind: {
-            hill: 'Hill',
-            field: 'Field',
-            forest: 'Forest',
-            water: 'Water',
-            other: 'Place',
-            // a house that is no longer there
-            house: 'Former house',
-        },
-        // a former house with no known name, by its old number
-        numberTitle: 'No. {number}',
     },
     // The base map's own labels from OpenStreetMap (map/background.js)
     background: {

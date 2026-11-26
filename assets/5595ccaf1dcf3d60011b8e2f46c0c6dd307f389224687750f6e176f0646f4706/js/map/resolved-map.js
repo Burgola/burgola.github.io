@@ -1,6 +1,6 @@
 import { repository, title, primaryName, orderedNames, nameConfirmed } from '../data/DataRepository.js';
 import { LocalSiteCategory } from '../data/DatDecoder.js';
-import { getLanguage, t } from '../i18n/i18n.js';
+import { getNameLanguage, t } from '../i18n/i18n.js';
 import { createRegions, contains, isMapRegion, REGION } from './regions.js';
 import { CONFIG } from '../config.js';
 import { progressStyle } from './progress-colors.js';
@@ -9,21 +9,15 @@ const empty = () => ({ type: 'FeatureCollection', features: [] });
 const collection = features => ({ type: 'FeatureCollection', features });
 const geo = (geometry, properties) => ({ type: 'Feature', geometry, properties });
 const point = coordinates => ({ type: 'Point', coordinates });
-const labels = { en: ['Municipality', 'Settlement', 'Street', 'Building', 'House number', 'Place', 'Group'], sl: ['Občina', 'Naselje', 'Ulica', 'Stavba', 'Hišna številka', 'Kraj', 'Skupina'] };
-// What a building is: a house, a church, a castle, a notable or a plain building.
-const buildingLabels = { en: { 0: 'Building', 1201: 'House', 1202: 'Church', 1203: 'Castle', 1205: 'Notable building' }, sl: { 0: 'Stavba', 1201: 'Hiša', 1202: 'Cerkev', 1203: 'Grad', 1205: 'Pomemben objekt' } };
-// A region of whole settlements, by its type: the map's own, one next to it, a subregion or a
-// group of villages.
-const regionLabels = { en: ['Region', 'Region', 'Subregion', 'Group of villages'], sl: ['Regija', 'Regija', 'Podregija', 'Skupina vasi'] };
-const words = {
-    en: { name: 'Name', inherited: 'Inherited from target', gurs: 'GURS name', local: 'Missing from GURS', sourceAbsent: 'Absent from current GURS release', unreviewed: 'Unreviewed', confirmed: 'Confirmed', uncertain: 'Uncertain', disputed: 'Disputed', rejected: 'Rejected', unreadable: 'Unreadable', stale: 'Needs recheck', language: 'Language', role: 'Role', target: 'Named feature', settlement: 'Settlement', municipality: 'Municipality', address: 'Address', postal: 'Post office', community: 'Local community', school: 'School district', unit: 'Administrative unit', buildingNumber: 'Cadastral building number', cadastral: 'Cadastral municipality', year: 'Year built', floors: 'Floors', dwellings: 'Dwellings', businesses: 'Business premises', historic: 'Historical', current: 'Current', unknown: 'Unknown', existence: 'Existence', place: 'Place', search: 'Search places, addresses and names…', noResults: 'No results', searchError: 'Search failed. Try again.', loadError: 'Could not load local map data', kindOf: 'Kind', reviewScope: 'Name text review', locationScope: 'Location review', oldNumbers: 'Historical house numbers', preferred: 'Preferred', alternative: 'Alternative', searchLoading: 'Loading search…', settlements: 'Settlements', coordinates: 'Coordinates', more: 'The first {shown} of {count}: type more to narrow them down', loadingHouses: 'Loading houses…' },
-    sl: { name: 'Ime', inherited: 'Podedovano od cilja', gurs: 'Ime GURS', local: 'Manjka v GURS', sourceAbsent: 'Ni v trenutni izdaji GURS', unreviewed: 'Še ni preverjeno', confirmed: 'Potrjeno', uncertain: 'Negotovo', disputed: 'Sporno', rejected: 'Zavrnjeno', unreadable: 'Nečitljivo', stale: 'Potreben ponovni pregled', language: 'Jezik', role: 'Vloga', target: 'Poimenovani objekt', settlement: 'Naselje', municipality: 'Občina', address: 'Naslov', postal: 'Pošta', community: 'Krajevna skupnost', school: 'Šolski okoliš', unit: 'Upravna enota', buildingNumber: 'Katastrska številka stavbe', cadastral: 'Katastrska občina', year: 'Leto gradnje', floors: 'Etaže', dwellings: 'Stanovanja', businesses: 'Poslovni prostori', historic: 'Zgodovinsko', current: 'Sedanje', unknown: 'Neznano', existence: 'Obstoj', place: 'Kraj', search: 'Iščite kraje, hiše in imena …', noResults: 'Ni zadetkov', searchError: 'Iskanje ni uspelo. Poskusite znova.', loadError: 'Podatkov zemljevida ni bilo mogoče naložiti', kindOf: 'Vrsta', reviewScope: 'Pregled besedila imena', locationScope: 'Pregled lokacije', oldNumbers: 'Stare hišne številke', preferred: 'Prednostno', alternative: 'Drugo ime', searchLoading: 'Nalaganje iskanja …', settlements: 'Naselja', coordinates: 'Koordinate', more: 'Prvih {shown} od {count}: vpišite več, da jih bo manj', loadingHouses: 'Nalaganje hiš …' },
-};
-const tr = key => (words[getLanguage()] || words.en)[key] || key;
+// What the card says a place is, by its kind (1–7), a building's category and a region's type
+// (the map's own, one next to it, a subregion or a group of villages).
+const KINDS = ['municipality', 'settlement', 'street', 'building', 'address', 'place', 'group'];
+const BUILDINGS = new Set([1201, 1202, 1203, 1205]);
+const REGIONS = ['own', 'next', 'subregion', 'villages'];
 const isRoad = f => f.kind === 6 && f.category === LocalSiteCategory.roadOrPath;
-const kindName = f => isRoad(f) ? t(`names.type.${LocalSiteCategory.roadOrPath}`) : f.kind === REGION ? (regionLabels[getLanguage()] || regionLabels.en)[f.region?.type ?? 2] : f.kind === 4 ? (buildingLabels[getLanguage()] || buildingLabels.en)[f.category] ?? buildingLabels.en[0] : (labels[getLanguage()] || labels.en)[f.kind - 1];
-const status = review => review.stale ? tr('stale') : tr(['unreviewed', 'confirmed', 'uncertain', 'disputed', 'rejected', 'unreadable'][review.outcome]);
-const sourceStatus = source => source === 0 ? tr('local') : source === 2 ? tr('sourceAbsent') : source === 3 ? (getLanguage() === 'sl' ? 'Pokritost vira ni na voljo' : 'Source coverage unavailable') : 'GURS';
+const kindName = f => isRoad(f) ? t(`names.type.${LocalSiteCategory.roadOrPath}`) : f.kind === REGION ? t(`card.region.${REGIONS[f.region?.type ?? 2]}`) : f.kind === 4 ? t(`card.building.${BUILDINGS.has(f.category) ? f.category : 0}`) : t(`card.kind.${KINDS[f.kind - 1]}`);
+const status = review => t(`card.status.${review.stale ? 'stale' : ['unreviewed', 'confirmed', 'uncertain', 'disputed', 'rejected', 'unreadable'][review.outcome]}`);
+const sourceStatus = source => source === 0 ? t('card.source.local') : source === 2 ? t('card.source.absent') : source === 3 ? t('card.source.unavailable') : 'GURS';
 const category = f => isRoad(f) ? 'road' : f.kind === REGION ? 'subregion' : f.kind === 4 || f.kind === 5 || f.category >= 1200 && f.category < 1300 ? 'building' : f.category >= 2100 && f.category < 2300 ? 'water' : f.category >= 3100 && f.category < 3200 ? 'relief' : f.category >= 1100 && f.category < 1200 ? 'hamlet' : f.category === 4102 ? 'region' : f.category >= 4100 && f.category < 4300 ? 'field' : 'other';
 const normalize = value => value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase();
 // The selected thing's own label and point are hidden: its selected label takes their place.
@@ -70,7 +64,7 @@ const isArea = f => f.bounds && (f.geometry?.type === 'Polygon' || f.geometry?.t
 // businessesIn(building): rows for the base map's businesses in one of our buildings; onMap(words):
 // the base map's businesses on screen that search finds (background.js).
 export function createResolvedMap(selection, businessesIn = () => [], onMap = () => []) {
-    let map, mode = 'map', language = getLanguage(), view = {}, selected = null, beforeId;
+    let map, mode = 'map', language = getNameLanguage(), view = {}, selected = null, beforeId;
     let renderQueued = false, disposed = false, searchRoot, progressLegend, panelQueued = false;
     let cancelSearch = () => {}, refreshSearch = () => {};
     const layerIds = [], loadErrors = new Map();
@@ -104,7 +98,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         map.getSource('tb-mask')?.setData(holes.length ? collection([geo({ type: 'Polygon', coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]], ...holes] }, {})]) : empty());
     }
     const feature = id => repository.features.get(id) || repository.searchFeatures.get(id);
-    const featureTitle = f => f ? title(f, getLanguage()) : '—';
+    const featureTitle = f => f ? title(f, getNameLanguage()) : '—';
     // Every loaded place: the complete record where there is one, else its search hint.
     function* allFeatures() {
         yield* repository.features.values();
@@ -145,15 +139,15 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
     const canonical = f => ({ kind: 'feature', id: f.id });
     const relation = (label, id) => ({ label, value: featureTitle(feature(id)), select: { kind: 'feature', id } });
     const addressText = f => `${featureTitle(feature(f.address.streetId || f.address.settlementId))} ${f.address.number ?? '?'}${f.address.suffix || ''}`;
-    const addressRow = f => ({ ...relation(tr('address'), f.id), value: addressText(f) });
+    const addressRow = f => ({ ...relation(t('card.address'), f.id), value: addressText(f) });
     function error(error) {
         console.error('[TBMap data]', error);
         const el = document.getElementById('map-message');
         el.hidden = false;
-        el.querySelector('strong').textContent = tr('loadError');
-        el.querySelector('span').textContent = getLanguage() === 'sl' ? 'Poskusite znova naložiti stran za trenutno objavljeno izdajo.' : 'Reload the page to load the current published map.';
+        el.querySelector('strong').textContent = t('map.dataError.title');
+        el.querySelector('span').textContent = t('map.dataError.body');
         if (!el.querySelector('button')) {
-            const reload = document.createElement('button'); reload.textContent = getLanguage() === 'sl' ? 'Znova naloži' : 'Reload';
+            const reload = document.createElement('button'); reload.textContent = t('map.dataError.reload');
             reload.addEventListener('click', () => location.reload()); el.append(reload);
         }
     }
@@ -173,13 +167,13 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
     }
     function nameRows(names, targetId) {
         const counts = new Map();
-        return orderedNames({ id: targetId, names }, getLanguage()).flatMap(n => {
+        return orderedNames({ id: targetId, names }, getNameLanguage()).flatMap(n => {
             const historical = n.role === 2 || !n.current;
             const number = historical ? 0 : (counts.get(n.language) || 0) + 1;
             if (!historical) counts.set(n.language, number);
-            const label = historical ? tr('historic') : number === 1 ? tr('name')
-                : number === 2 ? tr('alternative') : number === 3 ? t('selection.thirdName')
-                : t('selection.numberedName', { number });
+            const label = historical ? t('card.historic') : number === 1 ? t('card.name')
+                : number === 2 ? t('card.alternative') : number === 3 ? t('card.thirdName')
+                : t('card.numberedName', { number });
             return [{ label: `${n.language.toUpperCase()} · ${label}`, value: n.text,
                 badge: { text: status(n.textReview), tone: nameConfirmed(n) ? 'confirmed' : 'gov' } }];
         });
@@ -188,38 +182,38 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         const names = f.names;
         const rows = nameRows(names, f.id);
         const details = [{ label: 'GURS', value: sourceStatus(f.source) }];
-        for (const n of names) if (n.official && n.official !== n.text) rows.push({ label: `${tr('gurs')} · ${n.language.toUpperCase()}`, value: n.official });
+        for (const n of names) if (n.official && n.official !== n.text) rows.push({ label: `${t('card.gurs')} · ${n.language.toUpperCase()}`, value: n.official });
         for (const n of names) {
-            const note = n.notes?.[getLanguage()] ?? n.notes?.sl ?? n.notes?.en ?? Object.values(n.notes || {})[0];
+            const note = n.notes?.[getNameLanguage()] ?? n.notes?.sl ?? n.notes?.en ?? Object.values(n.notes || {})[0];
             if (note) details.push({ label: `${t('selection.editorNote')} ${n.text}`, value: note });
         }
-        if (f.kind === 6 && f.category) rows.push({ label: tr('kindOf'), value: t(`names.type.${f.category}`) === `names.type.${f.category}` ? t('names.type.other') : t(`names.type.${f.category}`) });
-        if (f.settlementId && f.settlementId !== f.id) rows.push(relation(tr('settlement'), f.settlementId));
-        if (f.municipalityId && f.municipalityId !== f.id) rows.push(relation(tr('municipality'), f.municipalityId));
+        if (f.kind === 6 && f.category) rows.push({ label: t('card.kindOf'), value: t(`names.type.${f.category}`) === `names.type.${f.category}` ? t('names.type.other') : t(`names.type.${f.category}`) });
+        if (f.settlementId && f.settlementId !== f.id) rows.push(relation(t('card.settlement'), f.settlementId));
+        if (f.municipalityId && f.municipalityId !== f.id) rows.push(relation(t('card.municipality'), f.municipalityId));
         // A village's subregions and groups; a municipality's and a region's villages.
         for (const region of regionsOf.get(f.id) || []) rows.push(relation(kindName(region), region.id));
         if (f.kind === 7) for (const id of f.members) { const member = feature(id); if (member) rows.push(relation(kindName(member), id)); }
         // A building's house numbers, each with its street or village.
-        if (f.kind === 4) for (const house of housesOf(f.id)) rows.push({ label: tr('address'), value: addressText(house) });
+        if (f.kind === 4) for (const house of housesOf(f.id)) rows.push({ label: t('card.address'), value: addressText(house) });
         // And what is in it, by the base map.
         if (f.kind === 4) { const inside = businessesIn(f); rows.push(...inside); listedBusinesses = inside.map(r => r.value).join('|'); }
         const a = f.address || housesOf(f.id)[0]?.address;
         if (a) {
-            if (f.address) rows.push({ label: tr('address'), value: addressText(f) });
-            details.push({ label: tr('postal'), value: `${a.postalCode} ${a.postalName}`.trim() }, { label: tr('community'), value: a.community }, { label: tr('school'), value: a.schoolDistrict }, { label: tr('unit'), value: a.administrativeUnit });
+            if (f.address) rows.push({ label: t('card.address'), value: addressText(f) });
+            details.push({ label: t('card.postal'), value: `${a.postalCode} ${a.postalName}`.trim() }, { label: t('card.community'), value: a.community }, { label: t('card.school'), value: a.schoolDistrict }, { label: t('card.unit'), value: a.administrativeUnit });
         }
         // A house shows its building's figures too.
         const building = f.building ? f : buildingOf(f), b = building?.building;
-        if (b) details.push({ label: tr('cadastral'), value: `${b.cadastralCode} ${b.cadastralName}`.trim() }, { label: tr('buildingNumber'), value: b.number }, { label: tr('year'), value: b.year }, { label: tr('floors'), value: b.floors }, { label: tr('dwellings'), value: b.dwellings }, { label: tr('businesses'), value: b.businessPremises });
+        if (b) details.push({ label: t('card.cadastral'), value: `${b.cadastralCode} ${b.cadastralName}`.trim() }, { label: t('card.buildingNumber'), value: b.number }, { label: t('card.year'), value: b.year }, { label: t('card.floors'), value: b.floors }, { label: t('card.dwellings'), value: b.dwellings }, { label: t('card.businesses'), value: b.businessPremises });
         // Where it is, as the search box takes it; an area's point is only where its name goes.
-        if (f.position && !(f.kind <= 2 || f.kind === REGION || f.kind >= 6 && isArea(f))) details.push({ label: tr('coordinates'), value: `${f.position[1].toFixed(5)}, ${f.position[0].toFixed(5)}` });
-        details.push({ label: tr('existence'), value: tr(['unknown', 'current', 'historic'][f.existence]) }, { label: tr('locationScope'), value: status(f.locationReview) });
-        const sections = [{ title: getLanguage() === 'sl' ? 'Podrobnosti' : 'Details', rows: details, fold: 'details' }];
-        if (f.oldNumbers.length) sections.push({ title: tr('oldNumbers'), rows: f.oldNumbers.map(n => ({ label: n.period || tr('unknown'), value: `${n.number}${n.settlement ? `, ${n.settlement}` : ''}` })) });
+        if (f.position && !(f.kind <= 2 || f.kind === REGION || f.kind >= 6 && isArea(f))) details.push({ label: t('card.coordinates'), value: `${f.position[1].toFixed(5)}, ${f.position[0].toFixed(5)}` });
+        details.push({ label: t('card.existence'), value: t(`card.${['unknown', 'current', 'historic'][f.existence]}`) }, { label: t('card.locationScope'), value: status(f.locationReview) });
+        const sections = [{ title: t('card.details'), rows: details, fold: 'details' }];
+        if (f.oldNumbers.length) sections.push({ title: t('card.oldNumbers'), rows: f.oldNumbers.map(n => ({ label: n.period || t('card.unknown'), value: `${n.number}${n.settlement ? `, ${n.settlement}` : ''}` })) });
         // Headed by what the place is (a settlement, a house…), also when one of its names was clicked.
         // A municipality's or a region's villages, side by side rather than a row each.
         const towns = townsOf(f);
-        const list = towns.length ? { title: `${tr('settlements')} (${towns.length})`, items: towns.map(town => ({ label: featureTitle(town), select: { kind: 'feature', id: town.id } })) } : undefined;
+        const list = towns.length ? { title: `${t('card.settlements')} (${towns.length})`, items: towns.map(town => ({ label: featureTitle(town), select: { kind: 'feature', id: town.id } })) } : undefined;
         return { kind: kindName(f), title: placeTitle(f), note: f.notes, rows, sections, list };
     }
     // A municipality's or a region's settlements, by name.
@@ -265,8 +259,8 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         map.getSource('tb-selected-point')?.setData(collection(markers));
         const lines = isRoad(f || {}) ? f.geometry?.type === 'LineString' ? [f.geometry.coordinates]
             : f.geometry?.type === 'MultiLineString' ? f.geometry.coordinates : [] : [];
-        const ends = lines.length ? [geo(point(lines[0][0]), { id: f.id, end: 'start', label: language === 'sl' ? 'Začetek' : 'Start' }),
-            geo(point(lines.at(-1).at(-1)), { id: f.id, end: 'end', label: language === 'sl' ? 'Konec' : 'End' })] : [];
+        const ends = lines.length ? [geo(point(lines[0][0]), { id: f.id, end: 'start', label: t('card.start') }),
+            geo(point(lines.at(-1).at(-1)), { id: f.id, end: 'end', label: t('card.end') })] : [];
         map.getSource('tb-road-ends')?.setData(collection(ends));
         markSelected(f?.id || null);
     }
@@ -451,7 +445,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
     }
     function addSearch() {
         searchRoot = document.createElement('div');searchRoot.className = 'tb-search';
-        const input = document.createElement('input');input.type = 'search';input.placeholder = tr('search');input.setAttribute('aria-label', tr('search'));
+        const input = document.createElement('input');input.type = 'search';input.placeholder = t('search.placeholder');input.setAttribute('aria-label', t('search.placeholder'));
         const results = document.createElement('div');results.className = 'tb-search-results';results.hidden = true;searchRoot.append(input, results);map.getContainer().append(searchRoot);
         // listed: the request whose results are in the list; openFirst: Enter came before them.
         let request = 0, timer, listed = 0, openFirst = false;
@@ -466,7 +460,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
         map.getContainer().addEventListener('pointerdown', e => { if (!searchRoot.contains(e.target)) results.hidden = true; });
         const onInput = () => { clearTimeout(timer);openFirst = false;const mine = ++request, generation = repository.generation;timer = setTimeout(async () => {
             const query = normalize(input.value.trim());if (!query) { listed = mine;openFirst = false;results.hidden = true;return; }
-            results.hidden = false;results.textContent = tr('searchLoading');
+            results.hidden = false;results.textContent = t('search.loading');
             try {
                 await repository.loadSearch();if (mine !== request || generation !== repository.generation) return;
                 // What is called what was typed comes first, then what is called something starting with
@@ -503,7 +497,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
                 // A point typed in is a place to go to, shown with a pin until the next click on the map.
                 const at = coordinatesIn(input.value);
                 if (at) {
-                    const button = document.createElement('button');button.type = 'button';button.textContent = `${tr('coordinates')} · ${at[1].toFixed(5)}, ${at[0].toFixed(5)}`;
+                    const button = document.createElement('button');button.type = 'button';button.textContent = `${t('card.coordinates')} · ${at[1].toFixed(5)}, ${at[0].toFixed(5)}`;
                     button.addEventListener('click', () => {
                         selection.clear?.();
                         map.getSource('tb-search-point')?.setData(collection([geo(point(at), {})]));
@@ -517,14 +511,14 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
                     const addressed = f.kind === 4 && housesOf(f.id).length;
                     let context = addressed ? (primaryName(f, language) ? housesOf(f.id).map(addressText).join(', ') : '') : f.address ? addressText(f) : f.settlementId && f.settlementId !== f.id ? featureTitle(feature(f.settlementId)) : '';
                     if (context === title) context = '';
-                    const alias = name && name.text !== featureTitle(f) && normalize(name.text).includes(query) ? ` · ${name.text}${name.current ? '' : ` (${tr('historic')})`}` : '';
+                    const alias = name && name.text !== featureTitle(f) && normalize(name.text).includes(query) ? ` · ${name.text}${name.current ? '' : ` (${t('card.historic')})`}` : '';
                     const button = document.createElement('button');button.type = 'button';button.textContent = `${title === '—' ? '' : `${title} · `}${kindName(f)}${context ? ` · ${context}` : ''}${alias}`;
                     button.addEventListener('click', () => { selection.select('feature', f.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);
                 }
                 // More than are listed: the list says so.
                 if (found > matches.length) {
                     const note = document.createElement('div');note.className = 'tb-search-note';
-                    note.textContent = tr('more').replace('{shown}', matches.length).replace('{count}', found);results.append(note);
+                    note.textContent = t('search.more', { shown: matches.length, count: found });results.append(note);
                 }
                 // Then the base map's businesses on screen, by their name or what they are.
                 const others = onMap(tokens);
@@ -532,10 +526,10 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
                     const button = document.createElement('button');button.type = 'button';button.textContent = `${other.label} · OpenStreetMap`;
                     button.addEventListener('click', () => { selection.select('osm', other.id, { zoom: true });results.hidden = true;input.blur(); });results.append(button);
                 }
-                if (!matches.length && !at && !others.length) results.textContent = tr('noResults');
+                if (!matches.length && !at && !others.length) results.textContent = t('search.none');
                 listed = mine;
                 if (openFirst) { openFirst = false; results.querySelector('button')?.click(); }
-            } catch (e) { if (mine === request && generation === repository.generation) { results.textContent = tr('searchError');console.error(e); } }
+            } catch (e) { if (mine === request && generation === repository.generation) { results.textContent = t('search.error');console.error(e); } }
         }, 150); };
         input.addEventListener('input', onInput);
         // Results already there are written again in a newly chosen language.
@@ -652,7 +646,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             // Drawn on the next frame, with the mode, language and view that map.js sets just after this:
             // each drawing has MapLibre lay out all of it again.
             queueRender();addSearch();loadVisible();
-            loadingNote = document.createElement('div'); loadingNote.className = 'tb-loading-houses'; loadingNote.hidden = true; loadingNote.textContent = tr('loadingHouses'); map.getContainer().append(loadingNote);
+            loadingNote = document.createElement('div'); loadingNote.className = 'tb-loading-houses'; loadingNote.hidden = true; loadingNote.textContent = t('map.loadingHouses'); map.getContainer().append(loadingNote);
             progressLegend = document.createElement('div'); progressLegend.className = 'progress-legend'; progressLegend.hidden = true; map.getContainer().append(progressLegend); renderProgressLegend();
         },
         setMode(value) {
@@ -663,7 +657,7 @@ export function createResolvedMap(selection, businessesIn = () => [], onMap = ()
             map.setPaintProperty('tb-region-lines', 'line-color', ['match', ['get', 'type'], 3, REGION_COLOURS[mode].group, REGION_COLOURS[mode].subregion]);
             map.setPaintProperty('tb-region-labels', 'text-color', REGION_COLOURS[mode].text);map.setPaintProperty('tb-region-labels', 'text-halo-color', aerial ? '#202020' : '#ffffff');
         },
-        setLanguage(value) { language = value;queueRender();renderProgressLegend();refreshSearch();if (loadingNote) loadingNote.textContent = tr('loadingHouses');if (searchRoot) { searchRoot.querySelector('input').placeholder = tr('search');searchRoot.querySelector('input').setAttribute('aria-label', tr('search')); } },
+        setLanguage() { language = getNameLanguage();queueRender();renderProgressLegend();refreshSearch();if (loadingNote) loadingNote.textContent = t('map.loadingHouses');if (searchRoot) { searchRoot.querySelector('input').placeholder = t('search.placeholder');searchRoot.querySelector('input').setAttribute('aria-label', t('search.placeholder')); } },
         applyView(value) { view = value;queueRender();loadVisible();renderProgressLegend(); },
         async refreshNames() { await repository.loadMap();queueRender(); },
         async reload(base) { cancelSearch(); selection.clear?.(); selected = null; repository.reset(base);const generation = repository.generation;try { await repository.loadMap();if (generation !== repository.generation) return;render();await loadVisible(); } catch (e) { if (generation === repository.generation) error(e); } },

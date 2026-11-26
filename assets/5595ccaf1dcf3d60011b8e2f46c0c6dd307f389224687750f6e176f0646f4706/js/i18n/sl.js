@@ -1,14 +1,17 @@
 // Slovenščina. Every key here must also exist in en.js (tools/check_i18n.mjs).
 export default {
+    // Jezik sam: njegovo ime in kratica na gumbu zgoraj desno
     meta: {
         name: 'Slovenščina',
         short: 'SL',
     },
+    // Ime strani: v zgornji vrstici, v zavihku brskalnika in v opisu za iskalnike
     site: {
         brand: 'Burgola Prekmurje Map',
         title: 'Burgola Prekmurje Map',
         description: 'Interaktivni zemljevid Prekmurja',
     },
+    // Zgornja vrstica: Zemljevid, O projektu, Porabje, jezik in meni na telefonu
     nav: {
         map: 'Zemljevid',
         about: 'O projektu',
@@ -18,6 +21,7 @@ export default {
         porabje: 'Porabje',
         porabjeHint: 'Prikaži Porabje, slovenske vasi onkraj meje na Madžarskem',
     },
+    // Stran O projektu in nasveti za uporabo zemljevida
     about: {
         title: 'O projektu',
         body: 'Burgola Prekmurje Map je interaktivni zemljevid Prekmurja: njegovih občin, vasi, hiš in domačih imen gričev, polj in domačij. Kmalu bo še več.',
@@ -30,17 +34,14 @@ export default {
             location: 'Na telefonu gumb za lokacijo pokaže, kje ste.',
         },
     },
-    // "Oblikovala <Vladimir Januš> in Tim Bunderla" (dvojina) — imena in
-    // povezava so v index.html in js/map/map.js.
-    // Iskalno polje (map/search.js)
+    // Iskalno polje na zemljevidu (map/resolved-map.js)
     search: {
-        label: 'Iskanje po zemljevidu',
-        placeholder: 'Iščite kraje, hiše, imena …',
-        loading: 'Nalagam …',
+        placeholder: 'Iščite kraje, hiše in imena …',
+        loading: 'Nalaganje iskanja …',
         none: 'Ni zadetkov',
-        clear: 'Počisti',
-        coordinates: 'Koordinate',
-        oldNumber: 'stara št. {number}',
+        error: 'Iskanje ni uspelo. Poskusite znova.',
+        // kadar je zadetkov preveč, da bi jih pokazali vse
+        more: 'Prvih {shown} od {count}: vpišite več, da jih bo manj',
     },
     // Meni nastavitev zemljevida (map/view-control.js)
     view: {
@@ -109,7 +110,6 @@ export default {
         between: '{from}–{to} %',
         from: '{from}–100 %',
         what: 'Delež hiš v vasi, ki imajo vsa imena preverjena ali je potrjeno, da hišnega imena nimajo.',
-        loading: 'Nalaganje …',
     },
     // Vrstica o stanju letalskega posnetka (map/aerial.js, map/tile-cache.js)
     aerial: {
@@ -141,6 +141,19 @@ export default {
         mapping: 'Kartiranje in vzdrževanje',
         contact: 'Kontakt',
     },
+    // Ali smemo šteti obiske z Google Analytics: vrstica na dnu strani ob prvem obisku in vrstica na
+    // strani O projektu, kjer se odgovor spremeni (samo na spletni strani, ne v urejevalniku)
+    consent: {
+        question: 'Ali smemo šteti obiske z Google Analytics? Tako vemo, koliko ljudi uporablja zemljevid. Google pri tem shrani piškotke v vaš brskalnik.',
+        yes: 'Da',
+        no: 'Ne',
+        about: 'Štetje obiskov z Google Analytics:',
+        allowed: 'dovoljeno',
+        refused: 'ni dovoljeno',
+        unanswered: 'še niste odgovorili',
+        change: 'Spremeni',
+    },
+    // Zemljevid sam: gumba Zemljevid in Satelit ter sporočila med nalaganjem
     map: {
         basemap: {
             label: 'Vrsta zemljevida',
@@ -148,107 +161,110 @@ export default {
             satellite: 'Satelit',
         },
         loading: 'Nalaganje zemljevida …',
+        loadingHouses: 'Nalaganje hiš …',
         error: {
             title: 'Zemljevida ni bilo mogoče naložiti.',
             body: 'Poskusite znova pozneje.',
         },
+        // kadar podatkov zemljevida ni bilo mogoče naložiti (sporočilo na vrhu zemljevida)
+        dataError: {
+            title: 'Podatkov zemljevida ni bilo mogoče naložiti',
+            body: 'Poskusite znova naložiti stran za trenutno objavljeno izdajo.',
+            reload: 'Znova naloži',
+        },
     },
+    // Gumbi in opomba na kartici kraja
     selection: {
         editorNote: 'Opomba urednika:',
-        thirdName: 'Tretje ime',
-        numberedName: '{number}. ime',
-        obcina: 'Občina',
-        naselje: 'Naselje',
-        hungarianName: 'Madžarsko: {name}',
-        // Slovenian has four plural forms: 1, 2, 3–4, 5+ (by the last two digits).
-        naseljaCount: {
-            one: '{count} naselje',
-            two: '{count} naselji',
-            few: '{count} naselja',
-            other: '{count} naselij',
-        },
-        naseljaLabel: 'Naselja',
-        selectObcina: 'Občina {name}',
-        selectNaselje: 'Naselje {name}',
         zoomTo: 'Približaj',
         copyLink: 'Kopiraj povezavo',
+        // ročica kartice na dnu telefonskega zaslona
         resize: 'Pokaži več ali manj',
         linkCopied: 'Povezava kopirana',
         close: 'Zapri',
     },
-    house: {
-        kind: 'Hiša',
-        oldNumber: 'Stara hišna številka',
-        // stara hišna številka z letom (ali leti), ko je veljala
-        oldNumberIn: 'Stara hišna številka ({year})',
-        post: 'Pošta',
-        community: {
-            ks: 'Krajevna skupnost',
-            cs: 'Četrtna skupnost',
-            vs: 'Vaška skupnost',
+    // Kartica kraja, ki se odpre ob kliku na zemljevid ali v iskanju (map/resolved-map.js)
+    card: {
+        // nad imenom: kaj je izbrani kraj
+        kind: {
+            municipality: 'Občina',
+            settlement: 'Naselje',
+            street: 'Ulica',
+            building: 'Stavba',
+            address: 'Hišna številka',
+            place: 'Kraj',
+            group: 'Skupina',
         },
-        school: 'Šolski okoliš',
-        adminUnit: 'Upravna enota',
-        coordinates: 'Koordinate',
-        building: 'Stavba',
-        cadastralMunicipality: 'Katastrska občina',
-        buildingNumber: 'Številka stavbe',
-        yearBuilt: 'Leto izgradnje',
-        floors: 'Število etaž',
-        dwellings: 'Število stanovanj',
-        businessPremises: 'Poslovni prostori',
-        typeLabel: 'Tip stavbe',
-        structureLabel: 'Nosilna konstrukcija',
-        electricity: 'Elektrika',
-        water: 'Vodovod',
-        sewage: 'Kanalizacija',
-        gas: 'Plin',
-        otherAddresses: 'Drugi naslovi v tej stavbi',
-        // Šifranti registra stavb GURS (izpiše jih tools/build_houses.mjs)
-        type: {
-            0: 'Ni podatka',
-            1: 'Samostoječa stavba',
-            2: 'Krajna vrstna stavba',
-            3: 'Vmesna vrstna stavba',
+        // kaj je stavba
+        building: {
+            0: 'Stavba',
+            1201: 'Hiša',
+            1202: 'Cerkev',
+            1203: 'Grad',
+            1205: 'Pomemben objekt',
         },
-        structure: {
-            0: 'Ni podatka',
-            1: 'Opeka',
-            2: 'Beton, železobeton',
-            3: 'Kamen',
-            4: 'Les',
-            5: 'Kombinacija različnih materialov',
-            6: 'Kovinska konstrukcija',
-            7: 'Montažna gradnja',
-            8: 'Drug material',
+        // območje celih vasi: Prekmurje, Porabje (regija ob njem), podregija (Goričko) ali skupina vasi
+        region: {
+            own: 'Regija',
+            next: 'Regija',
+            subregion: 'Podregija',
+            villages: 'Skupina vasi',
         },
-        connection: {
-            0: 'Ni podatka',
-            1: 'Da',
-            2: 'Ne',
-        },
-    },
-    names: {
+        // imena kraja po vrsti: Ime, Drugo ime, Tretje ime, 4. ime …
         name: 'Ime',
-        houseName: 'Hišno ime',
-        // pod imenom kartografa, kadar se uradno ime razlikuje
-        govName: 'Uradno ime',
-        variants: 'Druga imena',
-        noName: 'Ni znanega imena',
-        // nekdanje ime naselja, občine ali ulice (podatki kartografov)
-        oldName: 'Staro ime',
-        oldNameIn: 'Staro ime ({year})',
-        variantsShow: { one: 'Pokaži 1 ime', two: 'Pokaži 2 imeni', few: 'Pokaži {count} imena', other: 'Pokaži {count} imen' },
+        alternative: 'Drugo ime',
+        thirdName: 'Tretje ime',
+        numberedName: '{number}. ime',
+        // ime, ki ni več v rabi
+        historic: 'Zgodovinsko',
+        // uradno ime pri GURS, kadar se razlikuje
+        gurs: 'Ime GURS',
+        kindOf: 'Vrsta',
+        settlement: 'Naselje',
+        municipality: 'Občina',
+        address: 'Naslov',
+        // vasi občine ali regije, s številom za njim
+        settlements: 'Naselja',
+        details: 'Podrobnosti',
+        postal: 'Pošta',
+        community: 'Krajevna skupnost',
+        school: 'Šolski okoliš',
+        unit: 'Upravna enota',
+        cadastral: 'Katastrska občina',
+        buildingNumber: 'Katastrska številka stavbe',
+        year: 'Leto gradnje',
+        floors: 'Etaže',
+        dwellings: 'Stanovanja',
+        businesses: 'Poslovni prostori',
+        coordinates: 'Koordinate',
+        // ali kraj še obstaja: Sedanje, Zgodovinsko ali Neznano
+        existence: 'Obstoj',
+        current: 'Sedanje',
+        unknown: 'Neznano',
+        locationScope: 'Pregled lokacije',
+        oldNumbers: 'Stare hišne številke',
+        // ali je ime ali lokacija preverjena
         status: {
+            unreviewed: 'Še ni preverjeno',
             confirmed: 'Potrjeno',
-            confirmedGov: 'Potrjeno (GURS)',
-            // hiša brez imena, ki je še nihče ni preveril
-            unchecked: 'Nepotrjeno',
-            gov: 'Nepotrjeno (GURS)',
-            // vidno samo v urejevalniku, ki skrita imena še prikaže
-            hidden: 'Skrito',
+            uncertain: 'Negotovo',
+            disputed: 'Sporno',
+            rejected: 'Zavrnjeno',
+            unreadable: 'Nečitljivo',
+            stale: 'Potreben ponovni pregled',
         },
-        // Tipi Registra zemljepisnih imen GURS (tools/build_names.mjs)
+        // vrstica GURS v podrobnostih: ali je kraj v podatkih GURS
+        source: {
+            local: 'Manjka v GURS',
+            absent: 'Ni v trenutni izdaji GURS',
+            unavailable: 'Pokritost vira ni na voljo',
+        },
+        // oznaki na koncih izbrane ceste ali poti
+        start: 'Začetek',
+        end: 'Konec',
+    },
+    // Vrste krajev iz Registra zemljepisnih imen GURS, na kartici kraja v vrstici Vrsta
+    names: {
         type: {
             1103: 'Zaselek',
             1104: 'Del naselja',
@@ -269,23 +285,6 @@ export default {
             1000001: 'Cesta ali pot',
             other: 'Zemljepisno ime',
         },
-    },
-    // Ulice (map/streets.js)
-    street: {
-        kind: 'Ulica',
-        houses: 'Hiše na tej ulici',
-        houseCount: 'Hiše',
-    },
-    place: {
-        kind: {
-            hill: 'Hrib',
-            field: 'Polje',
-            forest: 'Gozd',
-            water: 'Voda',
-            other: 'Kraj',
-            house: 'Nekdanja hiša',
-        },
-        numberTitle: 'Št. {number}',
     },
     // Oznake osnovnega zemljevida iz OpenStreetMap (map/background.js)
     background: {

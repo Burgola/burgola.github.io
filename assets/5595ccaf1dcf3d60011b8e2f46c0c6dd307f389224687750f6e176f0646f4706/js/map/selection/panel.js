@@ -25,7 +25,7 @@
 // `select` is { kind, id }: clicking it selects that thing instead.
 // Markup skeleton lives in index.html (#selection-panel).
 
-import { t, getLanguage } from '../../i18n/i18n.js';
+import { t, getNameLanguage } from '../../i18n/i18n.js';
 import { load, save } from '../../core/storage.js';
 const localized = (value,language) => typeof value === 'string' ? value : value?.[language] ?? value?.sl ?? value?.en ?? Object.values(value || {})[0] ?? '';
 
@@ -142,7 +142,7 @@ export function createSelectionPanel(root) {
 
         el.subtitles.replaceChildren(...(view.subtitles || []).filter(Boolean).map((s) => node('div', null, s)));
 
-        const noteText = localized(view.note, getLanguage());
+        const noteText = localized(view.note, getNameLanguage());
         el.note.replaceChildren(...(noteText ? [node('strong', 'sp-note-label', t('selection.editorNote')), node('div', 'sp-note-text', noteText)] : []));
         el.note.hidden = !noteText;
 
