@@ -11,7 +11,7 @@ export function createEditorContext(map) {
     const bar = document.createElement('div'); bar.className = 'tb-context-bar'; bar.hidden = true;
     const title = document.createElement('span'), close = document.createElement('button');
     bar.append(title, close); map.getContainer().append(bar);
-    const translate = () => { close.textContent = getLanguage() === 'sl' ? 'Zapri pregled' : 'Close inspection'; };
+    const translate = () => { close.textContent = getLanguage() !== 'en' ? 'Zapri pregled' : 'Close inspection'; };
     translate(); onLanguageChange(translate);
     function clear() { map.getSource('tb-context').setData(empty); bar.hidden = true; }
     close.addEventListener('click', clear);

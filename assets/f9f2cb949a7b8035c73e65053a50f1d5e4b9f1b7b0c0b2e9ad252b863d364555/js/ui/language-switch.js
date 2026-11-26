@@ -1,14 +1,14 @@
-// EN | SL buttons in the top bar, built from whatever languages i18n has.
+// EN | SL buttons in the top bar (and Prekmurian's once it is offered), built from i18n's languages.
 
-import { LANGUAGES, getLanguage, setLanguage, onLanguageChange } from '../i18n/i18n.js';
+import { LANGUAGES, getLanguage, setLanguage, onLanguageChange, languageName } from '../i18n/i18n.js';
 
 export function initLanguageSwitch(container) {
-    const buttons = Object.entries(LANGUAGES).map(([code, strings]) => {
+    const buttons = Object.keys(LANGUAGES).map((code) => {
         const button = document.createElement('button');
         button.type = 'button';
         button.lang = code;
-        button.textContent = strings.meta.short;
-        button.title = strings.meta.name;
+        button.textContent = languageName(code, true);
+        button.title = languageName(code);
         button.addEventListener('click', () => setLanguage(code));
         container.append(button);
         return { code, button };

@@ -59,7 +59,7 @@ export function createEditorDrawing(map, selection) {
     restart.hidden = true;
     bar.append(message, finish, cancel, restart, ...roadButtons, undoPoint, ...areaButtons); map.getContainer().append(bar);
     function endpoints(list, controls = false) {
-        const sl = getLanguage() === 'sl';
+        const sl = getLanguage() !== 'en';
         const ends = list.length ? [{ type: 'Feature', properties: { end: 'start', label: sl ? 'Začetek' : 'Start' }, geometry: { type: 'Point', coordinates: list[0] } }] : [];
         if (list.length > 1 && (list.at(-1)[0] !== list[0][0] || list.at(-1)[1] !== list[0][1])) ends.push({ type: 'Feature', properties: { end: 'end', label: sl ? 'Konec' : 'End' }, geometry: { type: 'Point', coordinates: list.at(-1) } });
         if (controls) for (let i = 1; i < list.length - 1; i++) ends.push({ type: 'Feature', properties: { end: 'via', label: String(i) }, geometry: { type: 'Point', coordinates: list[i] } });
@@ -154,7 +154,7 @@ export function createEditorDrawing(map, selection) {
         guide.disabled = coordinates.length < 2; moveStart.disabled = coordinates.length === 0; moveEnd.disabled = coordinates.length < 2;
         undoPoint.disabled = mode === 'road' ? roadHistory.length === 0 : !history.length && !coordinates.length;
         square.disabled = coordinates.length < 3;
-        const sl = getLanguage() === 'sl';
+        const sl = getLanguage() !== 'en';
         guide.title = moveEnd.title = coordinates.length < 2 ? sl ? 'Najprej izberite začetek in konec' : 'Choose a start and end first' : '';
         moveStart.title = coordinates.length ? '' : sl ? 'Najprej izberite začetek' : 'Choose a start first';
         undoPoint.title = mode !== 'road' || roadHistory.length ? '' : sl ? 'Ni korakov za razveljavitev; shranjene točke so ohranjene' : 'No point edits to undo; saved points are retained';
@@ -188,7 +188,7 @@ export function createEditorDrawing(map, selection) {
         message.textContent = roadMessage || areaMessage(sl);
     }
     function translate() {
-        const sl = getLanguage() === 'sl';
+        const sl = getLanguage() !== 'en';
         finish.textContent = mode === 'road' ? sl ? 'Končaj izbor' : 'Finish selection' : sl ? 'Končaj risanje' : 'Finish drawing';
         cancel.textContent = sl ? 'Prekliči risanje' : 'Cancel drawing'; restart.textContent = sl ? 'Začni znova' : 'Start over';
         guide.textContent = sl ? 'Dodaj vmesno točko' : 'Add guide point'; moveStart.textContent = sl ? 'Premakni začetek' : 'Move start'; moveEnd.textContent = sl ? 'Premakni konec' : 'Move end'; undoPoint.textContent = sl ? 'Razveljavi zadnji korak' : 'Undo last step';
@@ -255,13 +255,13 @@ export function createEditorDrawing(map, selection) {
     function rebuildRoad() {
         const result = roadResult(coordinates);
         roadRoute = result?.coordinates || []; roadLegs = result?.legs || [];
-        roadMessage = result ? '' : getLanguage() === 'sl' ? 'Točke so ohranjene. Prikažite ceste med njimi, da se potek lahko obnovi.' : 'Your points are retained. Show the roads between them to rebuild the route.';
+        roadMessage = result ? '' : getLanguage() !== 'en' ? 'Točke so ohranjene. Prikažite ceste med njimi, da se potek lahko obnovi.' : 'Your points are retained. Show the roads between them to rebuild the route.';
         render();
     }
     function changeRoad(next, remember = true) {
         const result = roadResult(next);
         if (!result) {
-            roadMessage = getLanguage() === 'sl' ? 'Točk ni mogoče povezati po naloženih cestah. Prikažite celoten odsek ali izberite drugo točko. Prejšnji izbor je ohranjen.' : 'The loaded roads do not connect these points. Show the whole section or choose another point. Your previous selection is retained.';
+            roadMessage = getLanguage() !== 'en' ? 'Točk ni mogoče povezati po naloženih cestah. Prikažite celoten odsek ali izberite drugo točko. Prejšnji izbor je ohranjen.' : 'The loaded roads do not connect these points. Show the whole section or choose another point. Your previous selection is retained.';
             render(); return false;
         }
         if (remember) { roadHistory.push(structuredClone(coordinates)); if (roadHistory.length > 100) roadHistory.shift(); }
@@ -287,7 +287,7 @@ export function createEditorDrawing(map, selection) {
     }
     function chooseRoad(event) {
         gatherRoads();
-        const hit = roadAt(event.point), sl = getLanguage() === 'sl';
+        const hit = roadAt(event.point), sl = getLanguage() !== 'en';
         if (!hit) {
             roadMessage = map.getZoom() < 14
                 ? sl ? 'Približajte zemljevid, da je cesta jasno vidna, nato kliknite nanjo.' : 'Zoom in until the road is clearly visible, then click it.'
@@ -440,7 +440,7 @@ export function createEditorDrawing(map, selection) {
     square.addEventListener('click', () => {
         const squared = squareCorners(coordinates);
         if (!squared) {
-            roadMessage = getLanguage() === 'sl' ? 'Ta oblika nima dovolj sten za prave kote.' : 'This shape has too few walls for square corners.';
+            roadMessage = getLanguage() !== 'en' ? 'Ta oblika nima dovolj sten za prave kote.' : 'This shape has too few walls for square corners.';
             render(); return;
         }
         remember(); coordinates = squared; first = last = null; roadMessage = ''; render(); progress();
